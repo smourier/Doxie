@@ -61,7 +61,14 @@
                             Height="44"
                             Header="_File"
                             SubmenuOpened="OnFileOpened">
-                            <MenuItem x:Name="RecentFilesMenuItem" Header="Run From _Recent" />
+                            <MenuItem
+                                x:Name="createNewIndex"
+                                Click="CreateNewIndex_Click"
+                                Header="Create a new index..." />
+                            <MenuItem
+                                x:Name="addExistingIndex"
+                                Click="AddExistingIndex_Click"
+                                Header="Add an existing index..." />
                             <!--<MenuItem Click="OnPreferences" Header="_Preferences..." />-->
                             <Separator />
                             <MenuItem Click="OnExitClick" Header="E_xit" />
@@ -93,10 +100,7 @@
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
-        <ListView
-            x:Name="lbRemoteApps"
-            Grid.ColumnSpan="2"
-            IsEnabled="True" />
+        <TreeView x:Name="indexes" Grid.ColumnSpan="2" />
         <GridSplitter
             Grid.Column="2"
             Width="1"

@@ -17,7 +17,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
+		<PackageReference Include="System.IO.Hashing" Version="9.0.7" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\SqlNado\SqlNado.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Doxie.Model" />
 		<Using Include="Doxie.Utilities" />
+		<Using Include="Lucene.Net.Store" />
 		<Using Include="System" />
 		<Using Include="System.Collections" />
 		<Using Include="System.Collections.Concurrent" />
@@ -29,6 +40,7 @@
 		<Using Include="System.Globalization" />
 		<Using Include="System.Linq" />
 		<Using Include="System.IO" />
+		<Using Include="System.IO.Hashing" />
 		<Using Include="System.Numerics" />
 		<Using Include="System.Reflection" />
 		<Using Include="System.Runtime.Versioning" />

@@ -1,6 +1,5 @@
-﻿namespace Doxie
+﻿namespace Doxie;
+
+public partial class App : Application
 {
-    public partial class App : Application
-    {
-    }
 }

@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Include="..\Doxie\Properties\AssemblyVersionInfo.cs" Link="Properties\AssemblyVersionInfo.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.IO.Hashing" Version="9.0.7" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Doxie\Doxie.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Doxie.Model" />
+		<Using Include="Doxie.Utilities" />
+		<Using Include="System" />
+		<Using Include="System.IO" />
+		<Using Include="System.Reflection" />
+		<Using Include="System.Runtime.Versioning" />
+		<Using Include="System.Runtime.InteropServices" />
+		<Using Include="System.Threading.Tasks" />
+	</ItemGroup>
+
+</Project>

@@ -5,6 +5,10 @@ VisualStudioVersion = 17.14.36310.24
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Doxie", "Doxie\Doxie.csproj", "{F2D9845C-8F75-470A-86B1-0A802EBED3DD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlNado", "SqlNado\SqlNado.csproj", "{EF665028-EC0C-466C-9B78-37C01EF80DFD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Doxie.Cli", "Doxie.Cli\Doxie.Cli.csproj", "{6E27E439-7E4A-40B8-8850-A51F48A16480}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{F2D9845C-8F75-470A-86B1-0A802EBED3DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2D9845C-8F75-470A-86B1-0A802EBED3DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2D9845C-8F75-470A-86B1-0A802EBED3DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF665028-EC0C-466C-9B78-37C01EF80DFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF665028-EC0C-466C-9B78-37C01EF80DFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF665028-EC0C-466C-9B78-37C01EF80DFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF665028-EC0C-466C-9B78-37C01EF80DFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E27E439-7E4A-40B8-8850-A51F48A16480}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E27E439-7E4A-40B8-8850-A51F48A16480}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E27E439-7E4A-40B8-8850-A51F48A16480}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E27E439-7E4A-40B8-8850-A51F48A16480}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
