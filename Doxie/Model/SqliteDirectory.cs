@@ -3,7 +3,7 @@ using SqlNado.Utilities;
 
 namespace Doxie.Model;
 
-public class SqliteDirectory : BaseDirectory
+public class SqliteDirectory : Lucene.Net.Store.Directory
 {
     private readonly SQLiteSaveOptions? _saveOptions;
 
@@ -15,7 +15,7 @@ public class SqliteDirectory : BaseDirectory
             MemoryMapSize = -1,
             //Logger = new ConsoleLogger(true)
         };
-        SetLockFactory(new SingleInstanceLockFactory());
+        //SetLockFactory(new SingleInstanceLockFactory());
 
         if (!options.Equals(SQLiteOpenOptions.SQLITE_OPEN_READONLY))
         {
@@ -29,6 +29,14 @@ public class SqliteDirectory : BaseDirectory
     }
 
     public SQLiteDatabase Database { get; }
+    public override LockFactory LockFactory { get; } = new LuceneLockFactory();
+
+    public override Lucene.Net.Store.Lock MakeLock(string name) => LockFactory.MakeLock(name);
+    public override void ClearLock(string name) => LockFactory.ClearLock(name);
+
+    public override void SetLockFactory(LockFactory lockFactory)
+    {
+    }
 
     public override IndexOutput CreateOutput(string name, IOContext context)
     {
@@ -69,7 +77,7 @@ public class SqliteDirectory : BaseDirectory
 
     public override string[] ListAll() => [.. Database.Load<LuceneFile>($"SELECT {nameof(LuceneFile.Name)} FROM {nameof(LuceneFile)}").Select(f => f.Name)];
 
-    [DebuggerNonUserCode]
+    //[DebuggerNonUserCode]
     public override IndexInput OpenInput(string name, IOContext context)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -107,13 +115,14 @@ public class SqliteDirectory : BaseDirectory
 
     private sealed class LuceneOutput(LuceneFile file) : IndexOutput
     {
-        private readonly XxHash64 _checksum = new();
+        // experience shows Lucene.Net does not support 64-bit checksum
+        private readonly Crc32 _checksum = new();
         private readonly MemoryStream _memoryStream = new();
 
         public LuceneFile File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
         public override long Position => _memoryStream.Position;
-        public override long Checksum => (long)_checksum.GetCurrentHashAsUInt64();
+        public override long Checksum => _checksum.GetCurrentHashAsUInt32();
 
         public override void Flush()
         {
@@ -128,6 +137,7 @@ public class SqliteDirectory : BaseDirectory
 
         public override void WriteByte(byte b)
         {
+            _checksum.Append([b]);
             _memoryStream.WriteByte(b);
         }
 
@@ -163,6 +173,9 @@ public class SqliteDirectory : BaseDirectory
         public override byte ReadByte()
         {
             var b = File.Stream.ReadByte();
+            if (b < 0)
+                throw new EndOfStreamException();
+
             return (byte)b;
         }
 
@@ -207,9 +220,39 @@ public class SqliteDirectory : BaseDirectory
         {
             var ms = new MemoryStream();
             Data.Load(ms);
+            ms.Position = 0;
             return ms;
         }
 
         public override string ToString() => Name ?? string.Empty;
+    }
+
+    private sealed class LuceneLockFactory : LockFactory
+    {
+        public override void ClearLock(string lockName)
+        {
+        }
+
+        public override Lucene.Net.Store.Lock MakeLock(string lockName) => new LuceneLock(lockName);
+    }
+
+    private sealed class LuceneLock(string name) : Lucene.Net.Store.Lock
+    {
+        public string Name { get; } = name;
+
+        public override string ToString() => Name;
+        public override bool IsLocked()
+        {
+            return false;
+        }
+
+        public override bool Obtain()
+        {
+            return true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+        }
     }
 }
