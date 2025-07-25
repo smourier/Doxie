@@ -15,7 +15,6 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
             MemoryMapSize = -1,
             //Logger = new ConsoleLogger(true)
         };
-        //SetLockFactory(new SingleInstanceLockFactory());
 
         if (!options.Equals(SQLiteOpenOptions.SQLITE_OPEN_READONLY))
         {
@@ -25,17 +24,49 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         _saveOptions = Database.CreateSaveOptions();
         _saveOptions.SynchronizeSchema = false;
         _saveOptions.SynchronizeIndices = false;
-
     }
 
     public SQLiteDatabase Database { get; }
     public override LockFactory LockFactory { get; } = new LuceneLockFactory();
-
     public override Lucene.Net.Store.Lock MakeLock(string name) => LockFactory.MakeLock(name);
     public override void ClearLock(string name) => LockFactory.ClearLock(name);
+    public override void SetLockFactory(LockFactory lockFactory) { } // do nothing
 
-    public override void SetLockFactory(LockFactory lockFactory)
+    public virtual void SetSetting(string name, object? value)
     {
+        ArgumentNullException.ThrowIfNull(name);
+        var svalue = string.Format(CultureInfo.InvariantCulture, "{0}", value).Nullify();
+        Database.Save(new Setting { Name = name, Value = svalue });
+    }
+
+    public T? GetSetting<T>(string name, T? defaultValue = default) { if (TryGetSetting<T>(name, out var value)) return value; return defaultValue; }
+    public virtual bool TryGetSetting<T>(string name, out T? value)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        var setting = Database.LoadByPrimaryKey<Setting>(name);
+        if (setting == null)
+        {
+            value = default;
+            return false;
+        }
+
+        return Conversions.TryChangeType(setting.Value, CultureInfo.InvariantCulture, out value);
+    }
+
+    public virtual string? GetNullifiedSetting(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        var setting = Database.LoadByPrimaryKey<Setting>(name);
+        if (setting == null)
+            return null;
+
+        return setting.Value.Nullify();
+    }
+
+    public virtual bool RemoveSetting(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        return Database.Delete(new Setting { Name = name });
     }
 
     public override IndexOutput CreateOutput(string name, IOContext context)
@@ -56,7 +87,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         var result = Database.ExecuteNonQuery($"DELETE FROM {nameof(LuceneFile)} WHERE {nameof(LuceneFile.Name)} = ?", name);
     }
 
-    [Obsolete]
+    [Obsolete("FileExists is obsolete. Use other methods such as ListAll or FileLength to check for file existence.")]
     public override bool FileExists(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -77,7 +108,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
 
     public override string[] ListAll() => [.. Database.Load<LuceneFile>($"SELECT {nameof(LuceneFile.Name)} FROM {nameof(LuceneFile)}").Select(f => f.Name)];
 
-    //[DebuggerNonUserCode]
+    [DebuggerNonUserCode]
     public override IndexInput OpenInput(string name, IOContext context)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -85,16 +116,9 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         return new LuceneInput(file);
     }
 
-    public override void Sync(ICollection<string> names)
-    {
-        ArgumentNullException.ThrowIfNull(names);
-        // do nothing
-    }
+    public override void Sync(ICollection<string> names) => ArgumentNullException.ThrowIfNull(names);// do nothing
 
-    protected override void Dispose(bool disposing)
-    {
-        Database.Dispose();
-    }
+    protected override void Dispose(bool disposing) => Database.Dispose();
 
     private void EnsureSchemaAndIndices()
     {
@@ -110,6 +134,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         get
         {
             yield return typeof(LuceneFile);
+            yield return typeof(Setting);
         }
     }
 
@@ -130,10 +155,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         }
 
         [Obsolete]
-        public override void Seek(long pos)
-        {
-            _memoryStream.Seek(pos, SeekOrigin.Begin);
-        }
+        public override void Seek(long pos) => _memoryStream.Seek(pos, SeekOrigin.Begin);
 
         public override void WriteByte(byte b)
         {
@@ -157,15 +179,9 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         }
     }
 
-    private sealed class LuceneInput : IndexInput
+    private sealed class LuceneInput(LuceneFile file) : IndexInput(file.Name)
     {
-        public LuceneInput(LuceneFile file)
-            : base(file.Name)
-        {
-            File = file;
-        }
-
-        public LuceneFile File { get; }
+        public LuceneFile File { get; } = file;
 
         public override long Position => File.Stream.Position;
         public override long Length => File.Stream.Length;
@@ -179,20 +195,18 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
             return (byte)b;
         }
 
-        public override void ReadBytes(byte[] b, int offset, int len)
-        {
-            File.Stream.Read(b, offset, len);
-        }
+        public override void ReadBytes(byte[] b, int offset, int len) => File.Stream.Read(b, offset, len);
+        public override void Seek(long pos) => File.Stream.Seek(pos, SeekOrigin.Begin);
+        protected override void Dispose(bool disposing) { }             // do nothing
+    }
 
-        public override void Seek(long pos)
-        {
-            File.Stream.Seek(pos, SeekOrigin.Begin);
-        }
+    private sealed class Setting
+    {
+        [SQLiteColumn(IsPrimaryKey = true)]
+        public string? Name { get; set; }
+        public string? Value { get; set; }
 
-        protected override void Dispose(bool disposing)
-        {
-            // do nothing
-        }
+        public override string ToString() => Name + ": " + Value;
     }
 
     private sealed class LuceneFile : SQLiteBaseObject
@@ -229,11 +243,11 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
 
     private sealed class LuceneLockFactory : LockFactory
     {
+        public override Lucene.Net.Store.Lock MakeLock(string lockName) => new LuceneLock(lockName);
         public override void ClearLock(string lockName)
         {
+            // do nothing
         }
-
-        public override Lucene.Net.Store.Lock MakeLock(string lockName) => new LuceneLock(lockName);
     }
 
     private sealed class LuceneLock(string name) : Lucene.Net.Store.Lock
@@ -241,18 +255,8 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         public string Name { get; } = name;
 
         public override string ToString() => Name;
-        public override bool IsLocked()
-        {
-            return false;
-        }
-
-        public override bool Obtain()
-        {
-            return true;
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-        }
+        public override bool IsLocked() => false;
+        public override bool Obtain() => true;
+        protected override void Dispose(bool disposing) { }             // do nothing
     }
 }

@@ -11,8 +11,20 @@ public class DoxieIndex
 {
     public const string FileExtension = ".doxidx";
     public const string DefaultFieldName = "corpus";
+    public const string FieldPath = "path";
 
-    private readonly Lucene.Net.Store.Directory _directory;
+    // database settings
+    private const string _version = "version";
+    private const string _creationDateUtc = "creationDateUtc";
+    private const string _countOfDocuments = "countOfDocuments";
+    private const string _totalDurationSeconds = "totalDurationSeconds";
+    private const string _wasCancelled = "wasCancelled";
+    private const string _nonTextExtensions = "nonTextExtensions";
+    private const char _nonTextExtensionsSeparator = '|';
+
+    public event EventHandler<FileIndexingEventArgs>? FileIndexing;
+
+    private readonly SqliteDirectory _directory;
     private readonly StandardAnalyzer _analyzer;
     private readonly IndexWriter? _writer;
     private readonly DirectoryReader? _reader;
@@ -22,9 +34,10 @@ public class DoxieIndex
     {
         _directory = directory;
         _analyzer = new StandardAnalyzer(LuceneVersion.LUCENE_48);
-        Directory = directory;
         if (!directory.Database.OpenOptions.HasFlag(SQLiteOpenOptions.SQLITE_OPEN_READONLY))
         {
+            _directory.SetSetting(_version, AssemblyUtilities.GetInformationalVersion());
+            _directory.SetSetting(_creationDateUtc, DateTime.UtcNow.ToString("O"));
             var config = new IndexWriterConfig(LuceneVersion.LUCENE_48, _analyzer);
             _writer = new IndexWriter(_directory, config);
         }
@@ -35,10 +48,20 @@ public class DoxieIndex
         }
     }
 
+    public string Name => _directory.Database.FilePath;
+    public bool VacuumOnCommit { get; set; } = true;
     public bool IsReadOnly => _writer == null;
     public bool IsWriteOnly => !IsReadOnly;
     public bool IsIndexing { get; private set; }
-    public SqliteDirectory Directory { get; }
+
+    public int CountOfDocuments => _directory.GetSetting<int>(_countOfDocuments);
+    public double TotalDurationSeconds => _directory.GetSetting<double>(_totalDurationSeconds);
+    public DateTime CreationDateUtc => _directory.GetSetting<DateTime>(_creationDateUtc);
+    public string? Version => _directory.GetNullifiedSetting(_version);
+    public bool IndexingWasCancelled => _directory.GetSetting<bool>(_wasCancelled);
+    public IReadOnlyList<string> NonTextExtensions => [.. Conversions.SplitToNullifiedList(_directory.GetNullifiedSetting(_nonTextExtensions), [_nonTextExtensionsSeparator])];
+
+    public override string ToString() => Name;
 
     public Task<IndexCreationResult> AddToIndex(IndexCreationRequest request)
     {
@@ -66,20 +89,42 @@ public class DoxieIndex
         return result;
     }
 
+    protected virtual void OnFileIndexing(FileIndexingEventArgs e) => FileIndexing?.Invoke(this, e);
+
     protected virtual void DoCreateIndex(IndexCreationRequest request, IndexCreationResult result)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
 
+        var nonTextExtensions = new HashSet<string>();
+
+        var startTimeUtc = DateTime.UtcNow;
         var writer = GetWriter();
-        request.IncludeFilter ??= IndexCreationRequest.Include;
+        var count = 0;
         foreach (var entry in System.IO.Directory.EnumerateFileSystemEntries(request.InputDirectoryPath, request.SearchPattern, request.EnumerationOptions))
         {
-            if (!request.IncludeFilter(entry))
+            if (request.CancellationTokenSource?.IsCancellationRequested == true)
+            {
+                _directory.SetSetting(_wasCancelled, true);
+                break;
+            }
+
+            if (System.IO.Directory.Exists(entry))
+            {
+                // Skip directories
                 continue;
+            }
 
             var ext = Path.GetExtension(entry).ToLowerInvariant();
-            if (ext != ".cs")
+            if (Perceived.GetPerceivedType(ext).PerceivedType != PerceivedType.Text)
+            {
+                nonTextExtensions.Add(ext);
+                continue;
+            }
+
+            var e = new FileIndexingEventArgs(entry) { IndexedFilesCount = count, StartTimeUtc = startTimeUtc };
+            OnFileIndexing(e);
+            if (e.Cancel)
                 continue;
 
             var file = File.ReadAllText(entry);
@@ -87,13 +132,31 @@ public class DoxieIndex
             var idx = new IndexDocument(DefaultFieldName);
             idx.AddField(DefaultFieldName, file.Trim());
 
+            var relPath = Path.GetRelativePath(request.InputDirectoryPath, entry);
+            idx.AddField(FieldPath, relPath, true);
+
             var doc = idx.FinishAndGetDocument();
             writer.AddDocument(doc);
-
-            //break;
-            Console.WriteLine($"Indexing {entry}...");
+            count++;
         }
+
+        if (nonTextExtensions.Count > 0)
+        {
+            _directory.SetSetting(_nonTextExtensions, string.Join(_nonTextExtensionsSeparator, nonTextExtensions));
+        }
+        else
+        {
+            _directory.RemoveSetting(_nonTextExtensions);
+        }
+
+        _directory.SetSetting(_totalDurationSeconds, (DateTime.UtcNow - startTimeUtc).TotalSeconds);
+        _directory.SetSetting(_countOfDocuments, count);
+
         Commit();
+        if (VacuumOnCommit)
+        {
+            _directory.Database.Vacuum();
+        }
     }
 
     public static DoxieIndex OpenRead(string filePath)
@@ -144,14 +207,16 @@ public class DoxieIndex
         }
     }
 
-    public virtual SearchResult<T> Search<T>(string text, string defaultFieldName, int maximumDocuments, Func<int, float, T>? createItem = null) where T : SearchResultItem
+    public SearchResult<SearchResultItem> Search(string text, int maximumDocuments = int.MaxValue)
+        => Search<SearchResultItem>(text, maximumDocuments);
+
+    public virtual SearchResult<T> Search<T>(string text, int maximumDocuments = int.MaxValue) where T : SearchResultItem, new()
     {
         ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(defaultFieldName);
         if (_searcher == null)
             throw new InvalidOperationException("Cannot search in a write-only index.");
 
-        var parser = new QueryParser(LuceneVersion.LUCENE_48, defaultFieldName, _analyzer)
+        var parser = new QueryParser(LuceneVersion.LUCENE_48, DefaultFieldName, _analyzer)
         {
             AllowLeadingWildcard = true,
         };
@@ -172,20 +237,7 @@ public class DoxieIndex
             if (doc.Fields.Count == 0)
                 continue;
 
-            T item;
-            if (createItem == null)
-            {
-                if (!typeof(T).IsAssignableFrom(typeof(SearchResultItem)))
-                    throw new ArgumentNullException(nameof(createItem));
-
-                item = (T)new SearchResultItem(list.Count + 1, topDocs.ScoreDocs[i].Score);
-            }
-            else
-            {
-                item = createItem(list.Count + 1, topDocs.ScoreDocs[i].Score);
-                if (item == null)
-                    continue;
-            }
+            var item = new T { Index = list.Count + 1, Score = topDocs.ScoreDocs[i].Score };
             list.Add(item);
 
             foreach (var fld in doc)

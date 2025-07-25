@@ -9535,7 +9535,7 @@ namespace SqlNado.Utilities
         }
     }
 
-    public static class ConversionUtilities
+    internal static class ConversionUtilities
     {
         private static readonly char[] _enumSeparators = [',', ';', '+', '|', ' '];
 

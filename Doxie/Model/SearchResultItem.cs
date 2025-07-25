@@ -1,13 +1,13 @@
 ﻿namespace Doxie.Model;
 
-public class SearchResultItem(int index, float score)
+public class SearchResultItem
 {
-    private readonly ConcurrentDictionary<string, object> _fields = new();
+    private readonly ConcurrentDictionary<string, object?> _fields = new();
 
-    public int Index { get; } = index;
-    public float Score { get; } = score;
+    public int Index { get; set; }
+    public float Score { get; set; }
 
-    public IReadOnlyDictionary<string, object> Fields => _fields;
+    public IReadOnlyDictionary<string, object?> Fields => _fields;
 
     internal void AddField(string name, object? value)
     {

@@ -29,6 +29,7 @@
 		<Using Include="Doxie.Model" />
 		<Using Include="Doxie.Utilities" />
 		<Using Include="Lucene.Net.Store" />
+		<Using Include="Microsoft.Win32" />
 		<Using Include="System" />
 		<Using Include="System.Collections" />
 		<Using Include="System.Collections.Concurrent" />

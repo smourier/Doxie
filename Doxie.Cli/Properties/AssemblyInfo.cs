@@ -12,4 +12,4 @@
 [assembly: AssemblyDescription("A local search engine focused on source code.")]
 [assembly: AssemblyCompany("Simon Mourier")]
 [assembly: Guid("a0c87a5a-c759-4665-a539-731249be00de")]
-
+[assembly: SupportedOSPlatform("windows")]

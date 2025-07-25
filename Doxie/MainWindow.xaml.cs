@@ -1,14 +1,35 @@
-﻿using Microsoft.Win32;
-
-namespace Doxie;
+﻿namespace Doxie;
 
 public partial class MainWindow : Window
 {
-    private readonly List<Task> _indexingTasks = [];
+    private readonly List<WorkToDo> _indexingTasks = [];
 
     public MainWindow()
     {
         InitializeComponent();
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        var first = _indexingTasks.FirstOrDefault();
+        if (first != null && MessageBox.Show(
+                this,
+                $"Index '{first.Index.Name}' creation is in progress, are you sure you want to exit?",
+                AssemblyUtilities.GetProduct(),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) != MessageBoxResult.Yes)
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        foreach (var task in _indexingTasks)
+        {
+            task.Request.CancellationTokenSource?.Cancel();
+        }
+
+        Task.WaitAll([.. _indexingTasks.Select(t => t.Task)], 5000);
     }
 
     private void OnExitClick(object sender, RoutedEventArgs e) => Close();
@@ -16,17 +37,19 @@ public partial class MainWindow : Window
 
     private void OnRefresh(object sender, RoutedEventArgs e)
     {
-
     }
 
     private void OnFileOpened(object sender, RoutedEventArgs e)
     {
+        var item = (MenuItem)sender;
 
+        var working = _indexingTasks.Count > 0;
+        ((MenuItem)item.FindName("createNewIndex")).IsEnabled = !working;
+        ((MenuItem)item.FindName("addExistingIndex")).IsEnabled = !working;
     }
 
     private static void Prepare(FileDialog dialog)
     {
-        dialog.RestoreDirectory = true;
         dialog.Filter = $"Doxie Index Files (*{DoxieIndex.FileExtension})|*{DoxieIndex.FileExtension}|All Files (*.*)|*.*";
         dialog.DefaultExt = DoxieIndex.FileExtension;
         dialog.CheckPathExists = true;
@@ -37,6 +60,7 @@ public partial class MainWindow : Window
         var dlg = new SaveFileDialog
         {
             Title = "Choose an index file",
+            RestoreDirectory = true
         };
         Prepare(dlg);
         if (dlg.ShowDialog(this) != true)
@@ -52,8 +76,41 @@ public partial class MainWindow : Window
         if (fld.ShowDialog(this) != true)
             return;
 
-        var request = new IndexCreationRequest(fld.FolderName);
-        _indexingTasks.Add(index.AddToIndex(request));
+        var request = new IndexCreationRequest(fld.FolderName)
+        {
+            CancellationTokenSource = new CancellationTokenSource()
+        };
+        _indexingTasks.Add(new WorkToDo(index, request, DoIndex(index, request)));
+    }
+
+    private async Task DoIndex(DoxieIndex index, IndexCreationRequest request)
+    {
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            statusProgress.Visibility = Visibility.Visible;
+        });
+        index.FileIndexing += OnFileIndexing;
+        try
+        {
+            await index.AddToIndex(request).ConfigureAwait(false);
+        }
+        finally
+        {
+            index.FileIndexing -= OnFileIndexing;
+            _ = Dispatcher.BeginInvoke(() =>
+            {
+                statusProgress.Visibility = Visibility.Hidden;
+            });
+        }
+    }
+
+    private void OnFileIndexing(object? sender, FileIndexingEventArgs e)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            statusProgress.Visibility = Visibility.Visible;
+            statusProgressText.Text = Path.GetFileName(e.FilePath);
+        });
     }
 
     private void AddExistingIndex_Click(object sender, RoutedEventArgs e)
@@ -68,5 +125,12 @@ public partial class MainWindow : Window
             return;
 
         var index = DoxieIndex.OpenRead(dlg.FileName);
+    }
+
+    private sealed class WorkToDo(DoxieIndex index, IndexCreationRequest request, Task task)
+    {
+        public IndexCreationRequest Request { get; } = request ?? throw new ArgumentNullException(nameof(request));
+        public DoxieIndex Index { get; } = index ?? throw new ArgumentNullException(nameof(index));
+        public Task Task { get; } = task ?? throw new ArgumentNullException(nameof(task));
     }
 }
