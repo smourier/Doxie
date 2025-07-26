@@ -36,6 +36,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Index?.Dispose();
         Index = index;
         OnPropertyChanged(nameof(Index));
+        grid.Visibility = Visibility.Visible;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

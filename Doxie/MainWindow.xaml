@@ -95,7 +95,7 @@
             </Grid>
         </ControlTemplate>
     </Window.Template>
-    <Grid x:Name="grid">
+    <Grid x:Name="grid" Visibility="Hidden">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -108,26 +108,68 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
             <TextBlock
                 Margin="5,5,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 FontSize="16"
                 Foreground="#E89644"
-                Text="{Binding Index.Name}" />
+                Text="Index" />
         </Grid>
+
         <GridSplitter
             Grid.Row="1"
             Height="1"
             VerticalAlignment="Center"
             Background="#FFE0E0E0" />
-        <ListView x:Name="paths" Grid.Row="2" />
+
+        <Grid x:Name="directories" Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock
+                Margin="5,5,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                FontSize="16"
+                Foreground="#E89644"
+                Text="Directories in index" />
+        </Grid>
+
         <GridSplitter
             Grid.Row="3"
             Height="1"
             VerticalAlignment="Center"
             Background="#FFE0E0E0" />
-        <ListView x:Name="extensions" Grid.Row="4" />
+
+        <Grid x:Name="extensions" Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock
+                Margin="5,5,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                FontSize="16"
+                Foreground="#E89644"
+                Text="Directory batches" />
+        </Grid>
+
         <StatusBar
             Grid.Row="5"
             Height="30"

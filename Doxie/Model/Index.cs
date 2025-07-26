@@ -135,6 +135,7 @@ public class Index : INotifyPropertyChanged, IDisposable
                 continue;
             }
 
+            batch.EndTimeUtc = DateTime.UtcNow;
             var e = new FileIndexingEventArgs(batch, entry);
             OnFileIndexing(this, e);
             if (e.Cancel)

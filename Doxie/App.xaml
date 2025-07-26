@@ -5,5 +5,51 @@
     xmlns:local="clr-namespace:Doxie"
     StartupUri="MainWindow.xaml"
     ThemeMode="Dark">
-    <Application.Resources />
+    <Application.Resources>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <Style TargetType="GroupBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GroupBox">
+                        <Grid>
+                            <Expander
+                                x:Name="ex"
+                                Margin="0"
+                                Padding="0"
+                                Background="#5A5B93"
+                                IsExpanded="True">
+                                <Expander.Header>
+                                    <Border BorderThickness="1" CornerRadius="2,2,0,0">
+                                        <Border.Background>
+                                            <SolidColorBrush Color="#5A5B93" />
+                                        </Border.Background>
+                                        <ContentPresenter
+                                            Margin="4,2,4,2"
+                                            ContentSource="Header"
+                                            RecognizesAccessKey="True"
+                                            TextBlock.FontWeight="Bold"
+                                            TextBlock.Foreground="#E2E0E6" />
+                                    </Border>
+                                </Expander.Header>
+                                <Expander.Content>
+                                    <Border
+                                        BorderThickness="1,0,1,1"
+                                        CornerRadius="0,0,2,2"
+                                        Visibility="{Binding IsExpanded, ElementName=ex, Converter={StaticResource BoolToVis}}">
+                                        <Border.BorderBrush>
+                                            <SolidColorBrush Color="#FF333333" />
+                                        </Border.BorderBrush>
+                                        <ContentPresenter />
+                                    </Border>
+                                </Expander.Content>
+                            </Expander>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Application.Resources>
 </Application>
