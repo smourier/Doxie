@@ -13,6 +13,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Properties\PublishProfiles\FolderProfile.pubxml" />
 	  <None Remove="Resources\Doxie.png" />
 	</ItemGroup>
 
@@ -63,6 +64,10 @@
 
 	<ItemGroup>
 	  <Resource Include="Resources\Doxie.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Properties\PublishProfiles\" />
 	</ItemGroup>
 
 </Project>

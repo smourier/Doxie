@@ -95,33 +95,29 @@
     </Window.Template>
     <Grid x:Name="grid">
         <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="20" />
-            <ColumnDefinition Width="250" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition />
-        </Grid.ColumnDefinitions>
-        <TreeView x:Name="indexes" Grid.ColumnSpan="2" />
+        <ListView x:Name="index" />
         <GridSplitter
             Grid.Row="1"
-            Grid.Column="2"
-            Width="1"
-            HorizontalAlignment="Center"
+            Height="1"
+            VerticalAlignment="Center"
             Background="#FFE0E0E0" />
-        <StackPanel
-            x:Name="HostPanel"
-            Grid.Column="3"
-            Margin="0,4,0,4" />
+        <ListView x:Name="paths" Grid.Row="2" />
+        <GridSplitter
+            Grid.Row="3"
+            Height="1"
+            VerticalAlignment="Center"
+            Background="#FFE0E0E0" />
+        <ListView x:Name="extensions" Grid.Row="4" />
         <StatusBar
-            Grid.Row="2"
-            Grid.ColumnSpan="4"
+            Grid.Row="5"
             Height="30"
-            Margin="5,0,0,0"
-            Padding="0,0,0,0"
             Background="#202020">
             <StatusBarItem>
                 <TextBlock x:Name="statusText" Foreground="White" />
