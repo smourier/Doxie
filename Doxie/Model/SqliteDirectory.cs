@@ -15,6 +15,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
             MemoryMapSize = -1,
             //Logger = new ConsoleLogger(true)
         };
+        Database.BindOptions.DateTimeFormat = SQLiteDateTimeFormat.RoundTrip;
 
         if (!options.Equals(SQLiteOpenOptions.SQLITE_OPEN_READONLY))
         {
@@ -32,15 +33,16 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
     public override void ClearLock(string name) => LockFactory.ClearLock(name);
     public override void SetLockFactory(LockFactory lockFactory) { } // do nothing
 
-    public virtual void SetSetting(string name, object? value)
+    public bool Save(object instance) => Database.Save(instance, _saveOptions);
+    public virtual void SaveSetting(string name, object? value)
     {
         ArgumentNullException.ThrowIfNull(name);
         var svalue = string.Format(CultureInfo.InvariantCulture, "{0}", value).Nullify();
-        Database.Save(new Setting { Name = name, Value = svalue });
+        Save(new Setting { Name = name, Value = svalue });
     }
 
-    public T? GetSetting<T>(string name, T? defaultValue = default) { if (TryGetSetting<T>(name, out var value)) return value; return defaultValue; }
-    public virtual bool TryGetSetting<T>(string name, out T? value)
+    public T? LoadSetting<T>(string name, T? defaultValue = default) { if (TryLoadSetting<T>(name, out var value)) return value; return defaultValue; }
+    public virtual bool TryLoadSetting<T>(string name, out T? value)
     {
         ArgumentNullException.ThrowIfNull(name);
         var setting = Database.LoadByPrimaryKey<Setting>(name);
@@ -53,7 +55,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         return Conversions.TryChangeType(setting.Value, CultureInfo.InvariantCulture, out value);
     }
 
-    public virtual string? GetNullifiedSetting(string name)
+    public virtual string? LoadNullifiedSetting(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
         var setting = Database.LoadByPrimaryKey<Setting>(name);
@@ -63,7 +65,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         return setting.Value.Nullify();
     }
 
-    public virtual bool RemoveSetting(string name)
+    public virtual bool DeleteSetting(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
         return Database.Delete(new Setting { Name = name });
@@ -74,7 +76,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         ArgumentNullException.ThrowIfNull(name);
         DeleteFile(name);
         var file = new LuceneFile(Database) { Name = name };
-        if (!Database.Save(file, _saveOptions))
+        if (!Save(file))
             throw new InvalidOperationException();
 
         file.Data.Save([]);
@@ -135,6 +137,8 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         {
             yield return typeof(LuceneFile);
             yield return typeof(Setting);
+            yield return typeof(Index.Directory);
+            yield return typeof(Index.DirectoryBatch);
         }
     }
 

@@ -1,19 +1,9 @@
 ﻿namespace Doxie.Model;
 
-public class FileIndexingEventArgs(string filePath) : CancelEventArgs
+public class FileIndexingEventArgs(IndexDirectoryBatch batch, string filePath) : CancelEventArgs
 {
+    public IndexDirectoryBatch Batch { get; } = batch ?? throw new ArgumentNullException(nameof(batch));
     public string FilePath { get; } = filePath ?? throw new ArgumentNullException(nameof(filePath));
-    public int IndexedFilesCount { get; internal set; }
-    public DateTime StartTimeUtc { get; internal set; }
-    public TimeSpan ElapsedTime => DateTime.UtcNow - StartTimeUtc;
-    public int ProcessedFilesPerSecond
-    {
-        get
-        {
-            if (ElapsedTime.TotalSeconds <= 0)
-                return 0;
 
-            return (int)(IndexedFilesCount / ElapsedTime.TotalSeconds);
-        }
-    }
+    public override string ToString() => FilePath;
 }

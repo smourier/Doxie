@@ -16,19 +16,20 @@ internal class Program
         };
 
 
-        var name = "test" + DoxieIndex.FileExtension;
-        if (File.Exists(name))
-        {
-            File.Delete(name);
-        }
+        var name = "test" + Model.Index.FileExtension;
+        //if (File.Exists(name))
+        //{
+        //    File.Delete(name);
+        //}
 
-        var index = DoxieIndex.OpenWrite(name);
+        var index = Model.Index.OpenWrite(name);
         index.FileIndexing += (s, e) =>
         {
-            Console.WriteLine($"Indexing file: {e.FilePath} count: {e.IndexedFilesCount} elapsed: {e.ElapsedTime} files/sec: {e.ProcessedFilesPerSecond}");
+            Console.WriteLine($"Indexing file: {e.FilePath} count: {e.Batch.NumberOfDocuments} elapsed: {e.Batch.Duration} files/sec: {e.Batch.ProcessedFilesPerSecond}");
         };
 
-        var request = new IndexCreationRequest(@"E:\github\microsoft\VCSamples")
+        //var request = new IndexCreationRequest(@"E:\github\microsoft\VCSamples")
+        var request = new IndexCreationRequest(@"E:\smo\GitHub\Axxon")
         {
             CancellationTokenSource = cts
         };
@@ -39,17 +40,28 @@ internal class Program
             Console.WriteLine(indexResult.Exception);
         }
 
-        var query = DoxieIndex.OpenRead(name);
-        Console.WriteLine($"Index was created by Doxie version {query.Version} at {query.CreationDateUtc} (UTC).");
-        Console.WriteLine($"Index has {query.CountOfDocuments} documents.");
-        Console.WriteLine($"Indexing has skipped the following non text extensions: {string.Join(", ", query.NonTextExtensions)}");
-        Console.WriteLine($"Indexing took {query.TotalDurationSeconds} seconds.");
-        if (query.IndexingWasCancelled)
+        var query = Model.Index.OpenRead(name);
+        Console.WriteLine($"Index was created by Doxie version {query.Version} (UTC).");
+
+        foreach (var directory in query.Directories)
         {
-            Console.WriteLine($"Indexing was cancelled.");
+            Console.WriteLine($" Directory: {directory}");
+            var i = 0;
+            foreach (var batch in directory.Batches)
+            {
+                Console.WriteLine($"  Batch #{i++} has {batch.NumberOfDocuments} documents.");
+                Console.WriteLine($"  Indexing skipped files: {batch.NumberOfSkippedFiles}");
+                Console.WriteLine($"  Indexing skipped folders: {batch.NumberOfSkippedDirectories}");
+                Console.WriteLine($"  Indexing has skipped the following non text extensions: {string.Join(", ", batch.NonIndexedFileExtensions)}");
+                Console.WriteLine($"  Indexing took {batch.Duration}.");
+                if (batch.Options.HasFlag(IndexDirectoryBatchOptions.WasCancelled))
+                {
+                    Console.WriteLine($"  Indexing was cancelled.");
+                }
+            }
         }
 
-        var queryResult = query.Search<DoxieSearchResultItem>("polling");
+        var queryResult = query.Search<IndexSearchResultItem>("polling");
         foreach (var doc in queryResult.Items)
         {
             Console.WriteLine($"Found: {doc}");

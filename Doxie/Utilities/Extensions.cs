@@ -34,6 +34,41 @@ public static class Extensions
         return t.Length == 0 ? null : t;
     }
 
+    public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?>? source) where T : class
+    {
+        if (source == null)
+            return [];
+
+        return source.Where(item => item != null)!;
+    }
+
+    public static void UpdateWith<T>(this IList<T>? list, IEnumerable<T>? items, Func<T, T, bool> compare, Action<T, T> update)
+    {
+        ArgumentNullException.ThrowIfNull(compare);
+        ArgumentNullException.ThrowIfNull(update);
+        if (list == null || items == null)
+            return;
+
+        var removed = list.ToHashSet(); // copy
+        foreach (var item in items)
+        {
+            removed.RemoveWhere(i => compare(i, item));
+            var existing = list.FirstOrDefault(i => compare(i, item));
+            if (existing != null)
+            {
+                update(existing, item);
+                continue;
+            }
+
+            list.Add(item);
+        }
+
+        foreach (var item in removed)
+        {
+            list.Remove(item);
+        }
+    }
+
     public static int AddRange<T>(this ICollection<T>? collection, IEnumerable<T>? enumerable)
     {
         if (collection == null || enumerable == null)

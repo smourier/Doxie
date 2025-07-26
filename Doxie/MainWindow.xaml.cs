@@ -2,8 +2,6 @@
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
-    private readonly List<WorkToDo> _indexingTasks = [];
-
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public MainWindow()
@@ -14,7 +12,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _ = Task.Run(Settings.Current.CleanRecentFiles);
     }
 
-    public DoxieIndex? Index { get; private set; }
+    public Model.Index? Index { get; private set; }
+    public Task? IndexingTask { get; private set; }
     public IReadOnlyList<RecentFile> RecentFiles
     {
         get
@@ -31,7 +30,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public void OpenIndex(string filePath)
     {
         ArgumentNullException.ThrowIfNull(filePath);
-        var index = DoxieIndex.OpenWrite(filePath);
+        var index = Model.Index.OpenWrite(filePath);
         Settings.Current.AddRecentFile(filePath);
         OnPropertyChanged(nameof(RecentFiles));
         Index?.Dispose();
@@ -57,10 +56,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
-        var first = _indexingTasks.FirstOrDefault();
-        if (first != null && MessageBox.Show(
+        var task = IndexingTask;
+        if (task != null && !task.IsCompleted && MessageBox.Show(
                 this,
-                $"Index '{first.Index.Name}' creation is in progress, are you sure you want to exit?",
+                $"Indexing is in progress, are you sure you want to exit?",
                 AssemblyUtilities.GetProduct(),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -69,12 +68,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        foreach (var task in _indexingTasks)
+        if (task != null)
         {
-            task.Request.CancellationTokenSource?.Cancel();
+            Task.WaitAll([task], 5000);
         }
-
-        Task.WaitAll([.. _indexingTasks.Select(t => t.Task)], 5000);
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
@@ -115,8 +112,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var dlg = new OpenFileDialog
         {
             Title = "Choose an index file path",
-            Filter = $"Doxie Index Files (*{DoxieIndex.FileExtension})|*{DoxieIndex.FileExtension}",
-            DefaultExt = DoxieIndex.FileExtension,
+            Filter = $"Doxie Index Files (*{Model.Index.FileExtension})|*{Model.Index.FileExtension}",
+            DefaultExt = Model.Index.FileExtension,
             CheckFileExists = false,
             CheckPathExists = true,
             RestoreDirectory = true,
@@ -154,7 +151,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         //_indexingTasks.Add(new WorkToDo(index, request, DoIndex(index, request)));
     }
 
-    private async Task DoIndex(DoxieIndex index, IndexCreationRequest request)
+    private async Task DoIndex(Model.Index index, IndexCreationRequest request)
     {
         _ = Dispatcher.BeginInvoke(() =>
         {
@@ -185,11 +182,4 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-    private sealed class WorkToDo(DoxieIndex index, IndexCreationRequest request, Task task)
-    {
-        public IndexCreationRequest Request { get; } = request ?? throw new ArgumentNullException(nameof(request));
-        public DoxieIndex Index { get; } = index ?? throw new ArgumentNullException(nameof(index));
-        public Task Task { get; } = task ?? throw new ArgumentNullException(nameof(task));
-    }
 }
