@@ -58,6 +58,7 @@
 		<Using Include="System.Windows.Input" />
 		<Using Include="System.Windows.Media" />
 		<Using Include="System.Windows.Media.Imaging" />
+		<Using Include="System.Windows.Shell" />
 		<Using Include="System.Windows.Threading" />
 	</ItemGroup>
 

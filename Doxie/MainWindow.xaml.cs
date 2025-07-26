@@ -32,6 +32,13 @@ public partial class MainWindow : Window
         Task.WaitAll([.. _indexingTasks.Select(t => t.Task)], 5000);
     }
 
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        // for some reason, the WindowChrome does not update automatically
+        WindowChrome.GetWindowChrome(this).CaptionHeight = (int)(30 * newDpi.DpiScaleY);
+    }
+
     private void OnExitClick(object sender, RoutedEventArgs e) => Close();
     private void OnAboutClick(object sender, RoutedEventArgs e) => new About { Owner = this }.ShowDialog();
 
