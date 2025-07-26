@@ -1,6 +1,6 @@
 ﻿namespace Doxie.Model;
 
-public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged
+public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged, IEquatable<IndexDirectoryBatch>
 {
     private IndexDirectoryBatchOptions _options;
     private DateTime _startTimeUtc;
@@ -99,7 +99,7 @@ public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged
         }
     }
 
-    public override string ToString() => Path;
+    public override string ToString() => $"{Id} '{Path}' at {StartTimeUtc.ToLocalTime()}, docs: {NumberOfDocuments}";
 
     internal void Update(IndexDirectoryBatch? other)
     {
@@ -112,11 +112,15 @@ public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged
         NumberOfDocuments = other.NumberOfDocuments;
         NumberOfSkippedFiles = other.NumberOfSkippedFiles;
         NumberOfSkippedDirectories = other.NumberOfSkippedDirectories;
-        IncludedFileExtensions.UpdateWith(other.IncludedFileExtensions, (a, b) => a.Equals(b, StringComparison.OrdinalIgnoreCase), (a, b) => { });
-        ExcludedDirectoryNames.UpdateWith(other.ExcludedDirectoryNames, (a, b) => a.Equals(b, StringComparison.OrdinalIgnoreCase), (a, b) => { });
-        NonIndexedFileExtensions.UpdateWith(other.NonIndexedFileExtensions, (a, b) => a.Equals(b, StringComparison.OrdinalIgnoreCase), (a, b) => { });
+        IncludedFileExtensions.UpdateWith(other.IncludedFileExtensions, null, StringComparer.OrdinalIgnoreCase);
+        ExcludedDirectoryNames.UpdateWith(other.ExcludedDirectoryNames, null, StringComparer.OrdinalIgnoreCase);
+        NonIndexedFileExtensions.UpdateWith(other.NonIndexedFileExtensions, null, StringComparer.OrdinalIgnoreCase);
     }
 
     protected virtual void OnPropertyChanged(object sender, PropertyChangedEventArgs e) => PropertyChanged?.Invoke(sender, e);
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) => OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+
+    public override int GetHashCode() => Id.GetHashCode();
+    public override bool Equals(object? obj) => obj is IndexDirectoryBatch other && Equals(other);
+    public bool Equals(IndexDirectoryBatch? other) => other != null && Id.Equals(other.Id);
 }

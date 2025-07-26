@@ -42,21 +42,22 @@ public static class Extensions
         return source.Where(item => item != null)!;
     }
 
-    public static void UpdateWith<T>(this IList<T>? list, IEnumerable<T>? items, Func<T, T, bool> compare, Action<T, T> update)
+    // this method will update the list *inplace* with the items from the enumerable, witout resetting the whole list.
+    // so particularly useful for ObservableCollection<T> or similar.
+    public static void UpdateWith<T>(this IList<T>? list, IEnumerable<T>? items, Action<T, T>? update = null, IEqualityComparer<T>? equalityComparer = null)
     {
-        ArgumentNullException.ThrowIfNull(compare);
-        ArgumentNullException.ThrowIfNull(update);
         if (list == null || items == null)
             return;
 
-        var removed = list.ToHashSet(); // copy
+        equalityComparer ??= EqualityComparer<T>.Default;
+        var removed = list.ToHashSet(equalityComparer); // copy
         foreach (var item in items)
         {
-            removed.RemoveWhere(i => compare(i, item));
-            var existing = list.FirstOrDefault(i => compare(i, item));
+            removed.RemoveWhere(i => equalityComparer.Equals(i, item));
+            var existing = list.FirstOrDefault(i => equalityComparer.Equals(i, item));
             if (existing != null)
             {
-                update(existing, item);
+                update?.Invoke(existing, item);
                 continue;
             }
 

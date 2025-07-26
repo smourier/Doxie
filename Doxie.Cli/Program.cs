@@ -17,10 +17,10 @@ internal class Program
 
 
         var name = "test" + Model.Index.FileExtension;
-        //if (File.Exists(name))
-        //{
-        //    File.Delete(name);
-        //}
+        if (File.Exists(name))
+        {
+            File.Delete(name);
+        }
 
         var index = Model.Index.OpenWrite(name);
         index.FileIndexing += (s, e) =>

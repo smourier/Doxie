@@ -92,7 +92,7 @@ public class Index : INotifyPropertyChanged, IDisposable
     protected virtual void UpdateDirectories()
     {
         var directories = _sqlDirectory.Database.LoadAll<Directory>();
-        Directories.UpdateWith(directories.Select(d => d.ToIndexDirectory(this, d)) ?? [], (p1, p2) => p1.Path.EqualsIgnoreCase(p2.Path), (existing, p) => existing.Update(p));
+        Directories.UpdateWith(directories.Select(d => d.ToIndexDirectory(this, d)) ?? [], (existing, p) => existing.Update(p));
     }
 
     protected virtual void DoCreateIndex(IndexCreationRequest request, IndexCreationResult result)
