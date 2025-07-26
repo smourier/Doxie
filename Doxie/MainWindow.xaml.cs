@@ -1,12 +1,57 @@
 ﻿namespace Doxie;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private readonly List<WorkToDo> _indexingTasks = [];
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public MainWindow()
     {
         InitializeComponent();
+
+        DataContext = this;
+        _ = Task.Run(Settings.Current.CleanRecentFiles);
+    }
+
+    public DoxieIndex? Index { get; private set; }
+    public IReadOnlyList<RecentFile> RecentFiles
+    {
+        get
+        {
+            var recentFiles = new List<RecentFile>(Settings.Current.RecentFiles.OrderByDescending(f => f.LastAccessTime))
+            {
+                new RecentFileSeparator(),
+                new ClearRecentFiles()
+            };
+            return [.. recentFiles];
+        }
+    }
+
+    public void OpenIndex(string filePath)
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+        var index = DoxieIndex.OpenWrite(filePath);
+        Settings.Current.AddRecentFile(filePath);
+        OnPropertyChanged(nameof(RecentFiles));
+        Index?.Dispose();
+        Index = index;
+        OnPropertyChanged(nameof(Index));
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Key == Key.T &&
+            Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) &&
+            Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            var lastRecent = Settings.Current.RecentFiles.FirstOrDefault()?.FilePath;
+            if (lastRecent != null)
+            {
+                OpenIndex(lastRecent);
+            }
+        }
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -41,53 +86,72 @@ public partial class MainWindow : Window
 
     private void OnExitClick(object sender, RoutedEventArgs e) => Close();
     private void OnAboutClick(object sender, RoutedEventArgs e) => new About { Owner = this }.ShowDialog();
-
-    private void OnRefresh(object sender, RoutedEventArgs e)
-    {
-    }
-
     private void OnFileOpened(object sender, RoutedEventArgs e)
     {
         var item = (MenuItem)sender;
-
-        var working = _indexingTasks.Count > 0;
-        ((MenuItem)item.FindName("createNewIndex")).IsEnabled = !working;
-        ((MenuItem)item.FindName("addExistingIndex")).IsEnabled = !working;
+        ((MenuItem)item.FindName("openRecent")).IsEnabled = Settings.Current.RecentFiles.Count > 0;
     }
 
-    private static void Prepare(FileDialog dialog)
+    private void OpenRecent_Click(object sender, RoutedEventArgs e)
     {
-        dialog.Filter = $"Doxie Index Files (*{DoxieIndex.FileExtension})|*{DoxieIndex.FileExtension}|All Files (*.*)|*.*";
-        dialog.DefaultExt = DoxieIndex.FileExtension;
-        dialog.CheckPathExists = true;
+        if (e.OriginalSource is MenuItem item && item.DataContext is RecentFile recentFile)
+        {
+            if (recentFile is ClearRecentFiles)
+            {
+                Settings.Current.ClearRecentFiles();
+                OnPropertyChanged(nameof(RecentFiles));
+                return;
+            }
+
+            if (IOUtilities.PathIsFile(recentFile.FilePath))
+            {
+                OpenIndex(recentFile.FilePath!);
+            }
+        }
+    }
+
+    private void OpenIndex_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "Choose an index file path",
+            Filter = $"Doxie Index Files (*{DoxieIndex.FileExtension})|*{DoxieIndex.FileExtension}",
+            DefaultExt = DoxieIndex.FileExtension,
+            CheckFileExists = false,
+            CheckPathExists = true,
+            RestoreDirectory = true,
+        };
+        if (dlg.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            OpenIndex(dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Failed to open index file '{dlg.FileName}': {ex.GetInterestingExceptionMessage()}", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
     }
 
     private void CreateNewIndex_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new SaveFileDialog
-        {
-            Title = "Choose an index file",
-            RestoreDirectory = true
-        };
-        Prepare(dlg);
-        if (dlg.ShowDialog(this) != true)
-            return;
+        //var index = DoxieIndex.OpenWrite(dlg.FileName);
 
-        var index = DoxieIndex.OpenWrite(dlg.FileName);
+        //var fld = new OpenFolderDialog
+        //{
+        //    Title = "Select a folder to index",
+        //    Multiselect = false
+        //};
+        //if (fld.ShowDialog(this) != true)
+        //    return;
 
-        var fld = new OpenFolderDialog
-        {
-            Title = "Select a folder to index",
-            Multiselect = false
-        };
-        if (fld.ShowDialog(this) != true)
-            return;
-
-        var request = new IndexCreationRequest(fld.FolderName)
-        {
-            CancellationTokenSource = new CancellationTokenSource()
-        };
-        _indexingTasks.Add(new WorkToDo(index, request, DoIndex(index, request)));
+        //var request = new IndexCreationRequest(fld.FolderName)
+        //{
+        //    CancellationTokenSource = new CancellationTokenSource()
+        //};
+        //_indexingTasks.Add(new WorkToDo(index, request, DoIndex(index, request)));
     }
 
     private async Task DoIndex(DoxieIndex index, IndexCreationRequest request)
@@ -120,19 +184,7 @@ public partial class MainWindow : Window
         });
     }
 
-    private void AddExistingIndex_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new OpenFileDialog
-        {
-            Title = "Open an index file",
-            CheckFileExists = true
-        };
-        Prepare(dlg);
-        if (dlg.ShowDialog(this) != true)
-            return;
-
-        var index = DoxieIndex.OpenRead(dlg.FileName);
-    }
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     private sealed class WorkToDo(DoxieIndex index, IndexCreationRequest request, Task task)
     {

@@ -214,7 +214,5 @@ public sealed class Perceived(string extension)
     }
 
     [DllImport("shlwapi")]
-#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
     private static extern int AssocGetPerceivedType([MarshalAs(UnmanagedType.LPWStr)] string pszExt, ref PerceivedType ptype, ref PerceivedTypeSource pflag, ref IntPtr ppszType);
-#pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
 }

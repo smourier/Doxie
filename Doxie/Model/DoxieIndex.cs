@@ -7,7 +7,7 @@ using SqlNado;
 
 namespace Doxie.Model;
 
-public class DoxieIndex
+public class DoxieIndex : IDisposable
 {
     public const string FileExtension = ".doxidx";
     public const string DefaultFieldName = "corpus";
@@ -29,6 +29,7 @@ public class DoxieIndex
     private readonly IndexWriter? _writer;
     private readonly DirectoryReader? _reader;
     private readonly IndexSearcher? _searcher;
+    private bool _disposedValue;
 
     private DoxieIndex(SqliteDirectory directory)
     {
@@ -48,7 +49,8 @@ public class DoxieIndex
         }
     }
 
-    public string Name => _directory.Database.FilePath;
+    public string FilePath => _directory.Database.FilePath;
+    public string Name => Path.GetFileNameWithoutExtension(_directory.Database.FilePath);
     public bool VacuumOnCommit { get; set; } = true;
     public bool IsReadOnly => _writer == null;
     public bool IsWriteOnly => !IsReadOnly;
@@ -163,16 +165,30 @@ public class DoxieIndex
     {
         ArgumentNullException.ThrowIfNull(filePath);
 
-        var directory = new SqliteDirectory(filePath, SQLiteOpenOptions.SQLITE_OPEN_READONLY);
-        return new DoxieIndex(directory);
+        try
+        {
+            var directory = new SqliteDirectory(filePath, SQLiteOpenOptions.SQLITE_OPEN_READONLY);
+            return new DoxieIndex(directory);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"File '{filePath}' doesn't appear to be a valid Doxie index file.", ex);
+        }
     }
 
     public static DoxieIndex OpenWrite(string filePath, SQLiteOpenOptions options = SQLiteOpenOptions.SQLITE_OPEN_READWRITE | SQLiteOpenOptions.SQLITE_OPEN_CREATE)
     {
         ArgumentNullException.ThrowIfNull(filePath);
 
-        var directory = new SqliteDirectory(filePath, options);
-        return new DoxieIndex(directory);
+        try
+        {
+            var directory = new SqliteDirectory(filePath, options);
+            return new DoxieIndex(directory);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"File '{filePath}' doesn't appear to be a valid Doxie index file.", ex);
+        }
     }
 
     private IndexWriter GetWriter()
@@ -277,5 +293,22 @@ public class DoxieIndex
 
         result.Items = list;
         return result;
+    }
+
+    public void Dispose() { Dispose(disposing: true); GC.SuppressFinalize(this); }
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposedValue)
+        {
+            if (disposing)
+            {
+                _analyzer?.Dispose();
+                _writer?.Dispose();
+                _reader?.Dispose();
+                _directory?.Dispose(); // must be last
+            }
+
+            _disposedValue = true;
+        }
     }
 }
