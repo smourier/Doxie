@@ -108,6 +108,9 @@ public class Index : INotifyPropertyChanged, IDisposable
         SaveDirectoryBatch(batch);
         UpdateDirectories();
 
+        var includedExts = (request.IncludedFileExtensions?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
+        var excludedDirs = (request.ExcludedDirectoryNames?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
+
         var writer = GetWriter();
         foreach (var entry in System.IO.Directory.EnumerateFileSystemEntries(request.InputDirectoryPath, request.SearchPattern, request.EnumerationOptions))
         {
@@ -117,29 +120,39 @@ public class Index : INotifyPropertyChanged, IDisposable
                 break;
             }
 
-            if (System.IO.Directory.Exists(entry))
+            var attributes = IOUtilities.PathGetAttributes(entry);
+            if (attributes == null)
+                continue;
+
+            if (attributes.Value.HasFlag(FileAttributes.Directory))
             {
                 batch.NumberOfSkippedDirectories++;
                 continue;
             }
 
             var ext = Path.GetExtension(entry).ToLowerInvariant();
-            if (Perceived.GetPerceivedType(ext).PerceivedType != PerceivedType.Text)
-            {
-                if (!batch.NonIndexedFileExtensions.Contains(ext))
-                {
-                    batch.NonIndexedFileExtensions.Add(ext);
-                }
+            //if (Perceived.GetPerceivedType(ext).PerceivedType != PerceivedType.Text)
+            //{
+            //    if (!batch.NonIndexedFileExtensions.Contains(ext))
+            //    {
+            //        batch.NonIndexedFileExtensions.Add(ext);
+            //    }
 
-                batch.NumberOfSkippedFiles++;
-                continue;
-            }
+            //    batch.NumberOfSkippedFiles++;
+            //    continue;
+            //}
 
             batch.EndTimeUtc = DateTime.UtcNow;
             var e = new FileIndexingEventArgs(batch, entry);
             OnFileIndexing(this, e);
             if (e.Cancel)
                 continue;
+
+            if (!includedExts.Contains(ext))
+            {
+                batch.NumberOfSkippedFiles++;
+                continue;
+            }
 
             var file = File.ReadAllText(entry);
 

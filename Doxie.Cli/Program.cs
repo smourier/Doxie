@@ -33,6 +33,7 @@ internal class Program
         {
             CancellationTokenSource = cts
         };
+        request.IncludedFileExtensions.AddRange([".cs"]);
 
         var indexResult = await index.AddToIndex(request);
         if (indexResult.Exception != null)
@@ -49,7 +50,7 @@ internal class Program
             var i = 0;
             foreach (var batch in directory.Batches)
             {
-                Console.WriteLine($"  Batch #{i++} has {batch.NumberOfDocuments} documents.");
+                Console.WriteLine($"  Batch #{i++} has indexed {batch.NumberOfDocuments} documents.");
                 Console.WriteLine($"  Indexing skipped files: {batch.NumberOfSkippedFiles}");
                 Console.WriteLine($"  Indexing skipped folders: {batch.NumberOfSkippedDirectories}");
                 Console.WriteLine($"  Indexing has skipped the following non text extensions: {string.Join(", ", batch.NonIndexedFileExtensions)}");

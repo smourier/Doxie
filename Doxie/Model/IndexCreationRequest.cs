@@ -4,8 +4,11 @@ public class IndexCreationRequest(string inputDirectoryPath)
 {
     public string InputDirectoryPath { get; } = inputDirectoryPath ?? throw new ArgumentNullException(nameof(inputDirectoryPath));
     public CancellationTokenSource? CancellationTokenSource { get; set; }
+    public IndexCreationRequestOptions Options { get; set; }
     public virtual bool AsyncProcessing { get; set; } = true;
     public virtual string SearchPattern { get; set; } = "*.*";
+    public IList<string> IncludedFileExtensions { get; } = [];
+    public IList<string> ExcludedDirectoryNames { get; } = ["obj", "release", "debug"];
     public virtual EnumerationOptions EnumerationOptions { get; set; } = new EnumerationOptions
     {
         IgnoreInaccessible = true,
