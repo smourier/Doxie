@@ -10,10 +10,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         DataContext = this;
         _ = Task.Run(Settings.Current.CleanRecentFiles);
+
+        //Extensions.SaveDefaultTemplate<DataGridCell>();
     }
 
     public Model.Index? Index { get; private set; }
     public Task? IndexingTask { get; private set; }
+    public IndexDirectory? CurrentDirectory => directories.SelectedItem as IndexDirectory;
     public IReadOnlyList<RecentFile> RecentFiles
     {
         get
@@ -80,6 +83,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         base.OnDpiChanged(oldDpi, newDpi);
         // for some reason, the WindowChrome does not update automatically
         WindowChrome.GetWindowChrome(this).CaptionHeight = (int)(30 * newDpi.DpiScaleY);
+    }
+
+    private void OnDirectoriesSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(CurrentDirectory));
+        batches.Visibility = CurrentDirectory?.Batches.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnExitClick(object sender, RoutedEventArgs e) => Close();

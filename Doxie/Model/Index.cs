@@ -110,6 +110,7 @@ public class Index : INotifyPropertyChanged, IDisposable
 
         var includedExts = (request.IncludedFileExtensions?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
         var excludedDirs = (request.ExcludedDirectoryNames?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
+        var excludedExts = new HashSet<string>();
 
         var writer = GetWriter();
         foreach (var entry in System.IO.Directory.EnumerateFileSystemEntries(request.InputDirectoryPath, request.SearchPattern, request.EnumerationOptions))
@@ -150,6 +151,7 @@ public class Index : INotifyPropertyChanged, IDisposable
 
             if (!includedExts.Contains(ext))
             {
+                excludedExts.Add(ext);
                 batch.NumberOfSkippedFiles++;
                 continue;
             }
@@ -170,6 +172,9 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
 
         batch.EndTimeUtc = DateTime.UtcNow;
+        batch.NonIndexedFileExtensions.AddRange(excludedExts);
+        batch.IncludedFileExtensions.AddRange(includedExts);
+        batch.ExcludedDirectoryNames.AddRange(excludedDirs);
         SaveDirectoryBatch(batch);
         UpdateDirectories();
 

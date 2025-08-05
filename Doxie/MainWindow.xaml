@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:Doxie"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="clr-namespace:Doxie.Model"
     Title="Doxie"
     Width="1000"
     Height="800"
@@ -105,9 +106,6 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid x:Name="index">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -128,10 +126,7 @@
             VerticalAlignment="Center"
             Background="#FFE0E0E0" />
 
-        <Grid x:Name="directories" Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -144,6 +139,30 @@
                 FontSize="16"
                 Foreground="#E89644"
                 Text="Directories in index" />
+
+            <ListView
+                x:Name="directories"
+                Grid.Row="1"
+                ItemsSource="{Binding Index.Directories}"
+                SelectionChanged="OnDirectoriesSelectionChanged"
+                SelectionMode="Single">
+                <ListView.ItemTemplate>
+                    <DataTemplate DataType="{x:Type model:IndexDirectory}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="{Binding Path}" />
+                            <Button Grid.Column="1">Delete</Button>
+                            <Button Grid.Column="2">Rescan</Button>
+                            <Button Grid.Column="3">Remap...</Button>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
         </Grid>
 
         <GridSplitter
@@ -152,10 +171,7 @@
             VerticalAlignment="Center"
             Background="#FFE0E0E0" />
 
-        <Grid x:Name="extensions" Grid.Row="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -168,6 +184,86 @@
                 FontSize="16"
                 Foreground="#E89644"
                 Text="Directory batches" />
+
+            <DataGrid
+                x:Name="batches"
+                Grid.Row="1"
+                AutoGenerateColumns="False"
+                ItemsSource="{Binding CurrentDirectory.OrderedBatches}"
+                Visibility="Collapsed">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#E89644" />
+                        <Setter Property="Foreground" Value="White" />
+                        <Setter Property="BorderBrush" Value="#784424" />
+                        <Setter Property="BorderThickness" Value="1" />
+                        <Setter Property="Padding" Value="4" />
+                        <Setter Property="ContentTemplate">
+                            <Setter.Value>
+                                <DataTemplate>
+                                    <TextBlock
+                                        MaxWidth="100"
+                                        Text="{Binding}"
+                                        TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.CellStyle>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="VerticalAlignment" Value="Center" />
+                    </Style>
+                </DataGrid.CellStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Binding="{Binding StartTime}" Header="Start time" />
+                    <DataGridTextColumn Binding="{Binding EndTime}" Header="End time" />
+                    <DataGridTextColumn Binding="{Binding NumberOfDocuments}" Header="Number of documents" />
+                    <DataGridTextColumn Binding="{Binding NumberOfSkippedFiles}" Header="Number of skipped files" />
+                    <DataGridTextColumn Binding="{Binding NumberOfSkippedDirectories}" Header="Number of skipped directories" />
+                    <DataGridTextColumn Binding="{Binding ProcessedFilesPerSecond}" Header="Processed files/s" />
+                    <DataGridTemplateColumn Header="Included file extensions">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button>Edit</Button>
+                                    <TextBlock
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding IncludedFileExtensions, Converter={StaticResource CountConverter}}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Non-Indexed file extensions">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button>View</Button>
+                                    <TextBlock
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding NonIndexedFileExtensions, Converter={StaticResource CountConverter}}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Excluded directory names">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button>View</Button>
+                                    <TextBlock
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding ExcludedDirectoryNames, Converter={StaticResource CountConverter}}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
         </Grid>
 
         <StatusBar

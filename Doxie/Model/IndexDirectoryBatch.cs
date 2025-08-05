@@ -31,6 +31,7 @@ public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged,
         }
     }
 
+    public DateTime StartTime => StartTimeUtc.ToLocalTime();
     public DateTime StartTimeUtc
     {
         get => _startTimeUtc;
@@ -41,10 +42,12 @@ public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged,
 
             _startTimeUtc = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(StartTime));
             OnPropertyChanged(nameof(ProcessedFilesPerSecond));
         }
     }
 
+    public DateTime EndTime => EndTimeUtc.ToLocalTime();
     public DateTime EndTimeUtc
     {
         get => _endTimeUtc;
@@ -52,6 +55,7 @@ public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged,
         {
             _endTimeUtc = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(EndTime));
             OnPropertyChanged(nameof(ProcessedFilesPerSecond));
         }
     }

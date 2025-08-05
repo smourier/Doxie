@@ -6,6 +6,7 @@ public class IndexDirectory(string path) : INotifyPropertyChanged, IEquatable<In
 
     public string Path { get; } = path ?? throw new ArgumentNullException(nameof(path));
     public ObservableCollection<IndexDirectoryBatch> Batches { get; } = [];
+    public IEnumerable<IndexDirectoryBatch> OrderedBatches => Batches.OrderByDescending(b => b.StartTime);
 
     public override string ToString() => Path;
 

@@ -1,4 +1,6 @@
-﻿namespace Doxie.Utilities;
+﻿using System.Xml;
+
+namespace Doxie.Utilities;
 
 public static class Extensions
 {
@@ -161,6 +163,20 @@ public static class Extensions
             return GetInterestingException(tie.InnerException);
 
         return exception;
+    }
+
+    public static bool SaveDefaultTemplate<T>() => SaveDefaultTemplate(typeof(T));
+    public static bool SaveDefaultTemplate(Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        var control = Application.Current.FindResource(type);
+        if (control == null)
+            return false;
+
+        using var writer = new XmlTextWriter($"{type.FullName}.DefaultTemplate.xml", Encoding.UTF8);
+        writer.Formatting = Formatting.Indented;
+        XamlWriter.Save(control, writer);
+        return true;
     }
 
     public static long CopyTo(this Stream input, Stream output, long count = long.MaxValue, int bufferSize = 0x14000)
