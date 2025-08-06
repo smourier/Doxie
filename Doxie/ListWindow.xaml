@@ -8,13 +8,33 @@
     Title="List"
     Width="400"
     Height="600"
-    WindowStyle="ToolWindow"
-    ResizeMode="CanResizeWithGrip"
     FontFamily="Consolas"
     FontSize="12"
+    ResizeMode="CanResizeWithGrip"
     WindowStartupLocation="CenterOwner"
+    WindowStyle="ToolWindow"
     mc:Ignorable="d">
-    <Grid>
-        <ListView x:Name="list" />
-    </Grid>
+    <ListView x:Name="list">
+        <ListView.ItemTemplate>
+            <DataTemplate>
+                <Grid HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding}" />
+                    <Button
+                        x:Name="add"
+                        Grid.Column="1"
+                        HorizontalAlignment="Right"
+                        Click="Add_Click"
+                        Content="{Binding ButtonText, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"
+                        Visibility="{Binding ShowButton, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}, Converter={StaticResource BoolToVis}}" />
+                </Grid>
+            </DataTemplate>
+        </ListView.ItemTemplate>
+    </ListView>
 </Window>

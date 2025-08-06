@@ -12,12 +12,12 @@ public partial class About : Window
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        base.OnKeyDown(e);
         if (e.Key == Key.Escape)
         {
             e.Handled = true;
             Close();
         }
+        base.OnKeyDown(e);
     }
 
     private void OK_Click(object sender, RoutedEventArgs e) => Close();

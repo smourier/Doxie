@@ -17,6 +17,8 @@ public class Index : INotifyPropertyChanged, IDisposable
 
     // database settings
     private const string _version = "version";
+    private const string _includedFileExtensions = "includedFileExtensions";
+    private const string _excludedDirectoryNames = "excludedDirectoryNames";
     private const char _dbSeparator = '|';
 
     public event EventHandler<FileIndexingEventArgs>? FileIndexing;
@@ -46,6 +48,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
 
         UpdateDirectories();
+        UpdateSettings();
     }
 
     public string FilePath => _sqlDirectory.Database.FilePath;
@@ -56,6 +59,8 @@ public class Index : INotifyPropertyChanged, IDisposable
     public bool IsWriteOnly => !IsReadOnly;
     public bool IsIndexing { get; private set; }
     public ObservableCollection<IndexDirectory> Directories { get; } = [];
+    public ObservableCollection<string> IncludedFileExtensions { get; } = [];
+    public ObservableCollection<string> ExcludedDirectoryNames { get; } = [];
 
     public override string ToString() => Name;
 
@@ -95,12 +100,18 @@ public class Index : INotifyPropertyChanged, IDisposable
         Directories.UpdateWith(directories.Select(d => d.ToIndexDirectory(this, d)) ?? [], (existing, p) => existing.Update(p));
     }
 
+    protected virtual void UpdateSettings()
+    {
+        IncludedFileExtensions.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_includedFileExtensions), [_dbSeparator]));
+        ExcludedDirectoryNames.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_excludedDirectoryNames), [_dbSeparator]));
+    }
+
     protected virtual void DoCreateIndex(IndexCreationRequest request, IndexCreationResult result)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
 
-        EnsureDirectory(request.InputDirectoryPath);
+        EnsureDirectory(request);
         var batch = new IndexDirectoryBatch(Guid.NewGuid(), request.InputDirectoryPath)
         {
             StartTimeUtc = DateTime.UtcNow
@@ -108,8 +119,8 @@ public class Index : INotifyPropertyChanged, IDisposable
         SaveDirectoryBatch(batch);
         UpdateDirectories();
 
-        var includedExts = (request.IncludedFileExtensions?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
-        var excludedDirs = (request.ExcludedDirectoryNames?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
+        var includedExts = (IncludedFileExtensions?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
+        var excludedDirs = (ExcludedDirectoryNames?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
         var excludedExts = new HashSet<string>();
 
         var writer = GetWriter();
@@ -185,10 +196,10 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
     }
 
-    protected virtual void EnsureDirectory(string path)
+    protected virtual void EnsureDirectory(IndexCreationRequest request)
     {
-        ArgumentNullException.ThrowIfNull(path);
-        _sqlDirectory.Save(new Directory(_sqlDirectory.Database) { Path = path });
+        ArgumentNullException.ThrowIfNull(request);
+        _sqlDirectory.Save(new Directory(_sqlDirectory.Database) { Path = request.InputDirectoryPath });
     }
 
     protected virtual bool SaveDirectoryBatch(IndexDirectoryBatch batch)
@@ -393,9 +404,9 @@ public class Index : INotifyPropertyChanged, IDisposable
         [SQLiteColumn(IsPrimaryKey = true)]
         public string? Path { get; set; }
         public DateTime CreationTimUtc { get; set; } = DateTime.UtcNow;
-        SQLiteDatabase? ISQLiteObject.Database { get; set; } = db;
         public IEnumerable<DirectoryBatch> Batches => ((ISQLiteObject)this).Database?.LoadByForeignKey<DirectoryBatch>(this).WhereNotNull() ?? [];
 
+        SQLiteDatabase? ISQLiteObject.Database { get; set; } = db;
         public override string ToString() => Path ?? string.Empty;
 
         public IndexDirectory ToIndexDirectory(Index index, Directory directory)

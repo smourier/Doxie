@@ -154,25 +154,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void CreateNewIndex_Click(object sender, RoutedEventArgs e)
-    {
-        //var index = DoxieIndex.OpenWrite(dlg.FileName);
-
-        //var fld = new OpenFolderDialog
-        //{
-        //    Title = "Select a folder to index",
-        //    Multiselect = false
-        //};
-        //if (fld.ShowDialog(this) != true)
-        //    return;
-
-        //var request = new IndexCreationRequest(fld.FolderName)
-        //{
-        //    CancellationTokenSource = new CancellationTokenSource()
-        //};
-        //_indexingTasks.Add(new WorkToDo(index, request, DoIndex(index, request)));
-    }
-
     private async Task DoIndex(Model.Index index, IndexCreationRequest request)
     {
         _ = Dispatcher.BeginInvoke(() =>
@@ -228,6 +209,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 Owner = this,
                 Title = "View Non-Indexed File Extensions",
+                ShowButton = true,
+                ButtonText = "Include",
+                IncludeAction = obj =>
+                {
+                    if (obj is string ext)
+                    {
+                    }
+                }
             };
             list.ShowDialog();
         }
@@ -245,5 +234,36 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             };
             list.ShowDialog();
         }
+    }
+
+    private void AddDirectory_Click(object sender, RoutedEventArgs e)
+    {
+        var fld = new OpenFolderDialog
+        {
+            Title = "Select a directory to add to index",
+            Multiselect = false
+        };
+        if (fld.ShowDialog(this) != true)
+            return;
+
+        //var request = new IndexCreationRequest(fld.FolderName)
+        //{
+        //    CancellationTokenSource = new CancellationTokenSource()
+        //};
+        //_indexingTasks.Add(new WorkToDo(index, request, DoIndex(index, request)));
+    }
+
+    private void AddIncludedExt_Click(object sender, RoutedEventArgs e)
+    {
+
+    }
+
+    private void AddExcludedDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new AddDirectoryWindow()
+        {
+            Owner = this,
+        };
+        dlg.ShowDialog();
     }
 }

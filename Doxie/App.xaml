@@ -17,6 +17,8 @@
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#784424" />
         <!--<SolidColorBrush x:Key="ControlElevationBorderBrush" Color="White" />-->
         <CornerRadius x:Key="ControlCornerRadius">5</CornerRadius>
+        <SolidColorBrush x:Key="ButtonBackground" Color="#ebab34" />
+        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#ebbd34" />
 
     </Application.Resources>
 </Application>

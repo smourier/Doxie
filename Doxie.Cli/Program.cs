@@ -33,7 +33,7 @@ internal class Program
         {
             CancellationTokenSource = cts
         };
-        request.IncludedFileExtensions.AddRange([".cs"]);
+        index.IncludedFileExtensions.AddRange([".cs"]);
 
         var indexResult = await index.AddToIndex(request);
         if (indexResult.Exception != null)

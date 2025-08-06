@@ -98,7 +98,7 @@
     </Window.Template>
     <Grid x:Name="grid" Visibility="Hidden">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -106,8 +106,15 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid x:Name="index">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -117,7 +124,42 @@
                 VerticalAlignment="Top"
                 FontSize="16"
                 Foreground="#E89644"
-                Text="Index" />
+                Text="{Binding Index.Name, StringFormat={}\'{0}\' Index}" />
+
+            <Button
+                x:Name="addDirectory"
+                Grid.Row="1"
+                Margin="5"
+                Click="AddDirectory_Click">
+                Add directory to index...
+            </Button>
+
+            <TextBlock Grid.Row="2" Margin="5">Included file extensions:</TextBlock>
+            <TextBlock
+                Grid.Row="2"
+                Grid.Column="1"
+                Text="{Binding Index.IncludedFileExtensions, Converter={StaticResource StringJoinConverter}}" />
+            <Button
+                x:Name="addIncludedExt"
+                Grid.Row="2"
+                Grid.Column="2"
+                Click="AddIncludedExt_Click">
+                Add...
+            </Button>
+
+            <TextBlock Grid.Row="3" Margin="5">Excluded directory names:</TextBlock>
+            <TextBlock
+                Grid.Row="3"
+                Grid.Column="1"
+                Text="{Binding Index.ExcludedDirectoryNames, Converter={StaticResource StringJoinConverter}}" />
+            <Button
+                x:Name="adddExcludedDir"
+                Grid.Row="3"
+                Grid.Column="2"
+                Click="AddExcludedDir_Click">
+                Add...
+            </Button>
+
         </Grid>
 
         <GridSplitter
@@ -188,7 +230,6 @@
             <DataGrid
                 x:Name="batches"
                 Grid.Row="1"
-                SelectionUnit="FullRow"
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 CanUserDeleteRows="False"
@@ -196,6 +237,7 @@
                 CanUserSortColumns="False"
                 ColumnWidth="*"
                 ItemsSource="{Binding CurrentDirectory.OrderedBatches}"
+                SelectionUnit="FullRow"
                 Visibility="Collapsed">
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
