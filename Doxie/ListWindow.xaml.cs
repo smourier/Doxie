@@ -2,8 +2,9 @@
 
 public partial class ListWindow : Window
 {
-    public ListWindow()
+    public ListWindow(IEnumerable enumerable)
     {
         InitializeComponent();
+        list.ItemsSource = enumerable;
     }
 }

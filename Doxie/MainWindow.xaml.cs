@@ -205,15 +205,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-    private void EditIncludedExts_Click(object sender, RoutedEventArgs e)
+    private void ViewIncludedExts_Click(object sender, RoutedEventArgs e)
     {
         var batch = sender.GetDataContext<IndexDirectoryBatch>();
         if (batch != null)
         {
-            var list = new ListWindow
+            var list = new ListWindow(batch.IncludedFileExtensions)
             {
                 Owner = this,
-                Title = "Edit Included File Extensions"
+                Title = "View Included File Extensions"
             };
             list.ShowDialog();
         }
@@ -224,7 +224,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var batch = sender.GetDataContext<IndexDirectoryBatch>();
         if (batch != null)
         {
-            var list = new ListWindow
+            var list = new ListWindow(batch.NonIndexedFileExtensions)
             {
                 Owner = this,
                 Title = "View Non-Indexed File Extensions",
@@ -238,7 +238,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var batch = sender.GetDataContext<IndexDirectoryBatch>();
         if (batch != null)
         {
-            var list = new ListWindow
+            var list = new ListWindow(batch.ExcludedDirectoryNames)
             {
                 Owner = this,
                 Title = "View Excluded Directories",

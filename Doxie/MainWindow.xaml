@@ -188,11 +188,13 @@
             <DataGrid
                 x:Name="batches"
                 Grid.Row="1"
+                SelectionUnit="FullRow"
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 CanUserDeleteRows="False"
                 CanUserReorderColumns="False"
                 CanUserSortColumns="False"
+                ColumnWidth="*"
                 ItemsSource="{Binding CurrentDirectory.OrderedBatches}"
                 Visibility="Collapsed">
                 <DataGrid.ColumnHeaderStyle>
@@ -270,11 +272,11 @@
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
                                     <Button
-                                        x:Name="editIncludedExts"
+                                        x:Name="viewIncludedExts"
                                         Margin="5"
-                                        Click="EditIncludedExts_Click"
+                                        Click="ViewIncludedExts_Click"
                                         IsEnabled="{Binding IncludedFileExtensions, Converter={StaticResource CountToBooleanConverter}}">
-                                        Edit
+                                        View
                                     </Button>
                                     <TextBlock
                                         Margin="5,0,0,0"
