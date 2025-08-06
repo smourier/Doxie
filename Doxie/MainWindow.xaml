@@ -189,6 +189,10 @@
                 x:Name="batches"
                 Grid.Row="1"
                 AutoGenerateColumns="False"
+                CanUserAddRows="False"
+                CanUserDeleteRows="False"
+                CanUserReorderColumns="False"
+                CanUserSortColumns="False"
                 ItemsSource="{Binding CurrentDirectory.OrderedBatches}"
                 Visibility="Collapsed">
                 <DataGrid.ColumnHeaderStyle>
@@ -212,21 +216,66 @@
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.CellStyle>
                     <Style TargetType="DataGridCell">
-                        <Setter Property="VerticalAlignment" Value="Center" />
+                        <!--<Setter Property="VerticalContentAlignment" Value="Center" />-->
                     </Style>
                 </DataGrid.CellStyle>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Binding="{Binding StartTime}" Header="Start time" />
-                    <DataGridTextColumn Binding="{Binding EndTime}" Header="End time" />
-                    <DataGridTextColumn Binding="{Binding NumberOfDocuments}" Header="Number of documents" />
-                    <DataGridTextColumn Binding="{Binding NumberOfSkippedFiles}" Header="Number of skipped files" />
-                    <DataGridTextColumn Binding="{Binding NumberOfSkippedDirectories}" Header="Number of skipped directories" />
-                    <DataGridTextColumn Binding="{Binding ProcessedFilesPerSecond}" Header="Processed files/s" />
+                    <DataGridTextColumn
+                        Binding="{Binding StartTime}"
+                        Header="Start time"
+                        TextBlock.TextAlignment="Center">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Binding="{Binding EndTime}" Header="End time">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Binding="{Binding NumberOfDocuments}" Header="Number of documents">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Binding="{Binding NumberOfSkippedFiles}" Header="Number of skipped files">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Binding="{Binding NumberOfSkippedDirectories}" Header="Number of skipped directories">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Binding="{Binding ProcessedFilesPerSecond}" Header="Processed files/s">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                     <DataGridTemplateColumn Header="Included file extensions">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button>Edit</Button>
+                                    <Button
+                                        x:Name="editIncludedExts"
+                                        Margin="5"
+                                        Click="EditIncludedExts_Click"
+                                        IsEnabled="{Binding IncludedFileExtensions, Converter={StaticResource CountToBooleanConverter}}">
+                                        Edit
+                                    </Button>
                                     <TextBlock
                                         Margin="5,0,0,0"
                                         VerticalAlignment="Center"
@@ -239,7 +288,13 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button>View</Button>
+                                    <Button
+                                        x:Name="viewNonIndexedExts"
+                                        Margin="5"
+                                        Click="ViewNonIndexedExts_Click"
+                                        IsEnabled="{Binding NonIndexedFileExtensions, Converter={StaticResource CountToBooleanConverter}}">
+                                        View
+                                    </Button>
                                     <TextBlock
                                         Margin="5,0,0,0"
                                         VerticalAlignment="Center"
@@ -252,7 +307,13 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button>View</Button>
+                                    <Button
+                                        x:Name="viewExcludedDirs"
+                                        Margin="5"
+                                        Click="ViewExcludedDirs_Click"
+                                        IsEnabled="{Binding ExcludedDirectoryNames, Converter={StaticResource CountToBooleanConverter}}">
+                                        View
+                                    </Button>
                                     <TextBlock
                                         Margin="5,0,0,0"
                                         VerticalAlignment="Center"

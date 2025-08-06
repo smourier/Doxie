@@ -11,7 +11,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         DataContext = this;
         _ = Task.Run(Settings.Current.CleanRecentFiles);
 
-        //Extensions.SaveDefaultTemplate<DataGridCell>();
+        Extensions.SaveDefaultTemplate<Button>();
     }
 
     public Model.Index? Index { get; private set; }
@@ -40,6 +40,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Index = index;
         OnPropertyChanged(nameof(Index));
         grid.Visibility = Visibility.Visible;
+        if (index.Directories.Count > 0)
+        {
+            directories.ItemsSource = index.Directories;
+            directories.SelectedIndex = 0;
+            batches.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            directories.ItemsSource = null;
+            directories.SelectedIndex = -1;
+            batches.Visibility = Visibility.Collapsed;
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -192,4 +204,46 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private void EditIncludedExts_Click(object sender, RoutedEventArgs e)
+    {
+        var batch = sender.GetDataContext<IndexDirectoryBatch>();
+        if (batch != null)
+        {
+            var list = new ListWindow
+            {
+                Owner = this,
+                Title = "Edit Included File Extensions"
+            };
+            list.ShowDialog();
+        }
+    }
+
+    private void ViewNonIndexedExts_Click(object sender, RoutedEventArgs e)
+    {
+        var batch = sender.GetDataContext<IndexDirectoryBatch>();
+        if (batch != null)
+        {
+            var list = new ListWindow
+            {
+                Owner = this,
+                Title = "View Non-Indexed File Extensions",
+            };
+            list.ShowDialog();
+        }
+    }
+
+    private void ViewExcludedDirs_Click(object sender, RoutedEventArgs e)
+    {
+        var batch = sender.GetDataContext<IndexDirectoryBatch>();
+        if (batch != null)
+        {
+            var list = new ListWindow
+            {
+                Owner = this,
+                Title = "View Excluded Directories",
+            };
+            list.ShowDialog();
+        }
+    }
 }

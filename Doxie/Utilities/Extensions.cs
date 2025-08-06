@@ -362,4 +362,15 @@ public static class Extensions
             }
         }
     }
+
+    public static T? GetDataContext<T>(this object? obj)
+    {
+        if (obj is not FrameworkElement element)
+            return default;
+
+        if (element.DataContext is T dataContext)
+            return dataContext;
+
+        return default;
+    }
 }
