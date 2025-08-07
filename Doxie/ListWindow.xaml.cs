@@ -2,15 +2,18 @@
 
 public partial class ListWindow : Window
 {
-    public ListWindow(IEnumerable enumerable)
+    private readonly ObservableCollection<string> _strings = new();
+
+    public ListWindow(IEnumerable<string> enumerable)
     {
         InitializeComponent();
-        list.ItemsSource = enumerable;
+        _strings.AddRange(enumerable);
+        list.ItemsSource = _strings;
     }
 
     public bool ShowButton { get; set; }
     public string? ButtonText { get; set; }
-    public Action<object>? IncludeAction { get; set; }
+    public Func<string, bool>? IncludeAction { get; set; }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
@@ -27,7 +30,10 @@ public partial class ListWindow : Window
         var ext = sender.GetDataContext<string>();
         if (ext != null && IncludeAction != null)
         {
-            IncludeAction(ext);
+            if (IncludeAction(ext))
+            {
+                _strings.Remove(ext);
+            }
         }
     }
 }

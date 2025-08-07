@@ -1,6 +1,6 @@
 ﻿namespace Doxie.Model;
 
-public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged, IEquatable<IndexDirectoryBatch>
+public class IndexDirectoryBatch(IndexDirectory directory, Guid id) : INotifyPropertyChanged, IEquatable<IndexDirectoryBatch>
 {
     private IndexDirectoryBatchOptions _options;
     private DateTime _startTimeUtc;
@@ -11,8 +11,8 @@ public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged,
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public IndexDirectory Directory { get; } = directory ?? throw new ArgumentNullException(nameof(directory));
     public Guid Id { get; } = id;
-    public string Path { get; } = path ?? throw new ArgumentNullException(nameof(path));
     public ObservableCollection<string> IncludedFileExtensions { get; } = [];
     public ObservableCollection<string> ExcludedDirectoryNames { get; } = [];
     public ObservableCollection<string> NonIndexedFileExtensions { get; } = [];
@@ -103,7 +103,7 @@ public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged,
         }
     }
 
-    public override string ToString() => $"{Id} '{Path}' at {StartTimeUtc.ToLocalTime()}, docs: {NumberOfDocuments}";
+    public override string ToString() => $"{Id} '{Directory}' at {StartTimeUtc.ToLocalTime()}, docs: {NumberOfDocuments}";
 
     internal void Update(IndexDirectoryBatch? other)
     {
@@ -122,7 +122,7 @@ public class IndexDirectoryBatch(Guid id, string path) : INotifyPropertyChanged,
     }
 
     protected virtual void OnPropertyChanged(object sender, PropertyChangedEventArgs e) => PropertyChanged?.Invoke(sender, e);
-    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) => OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+    public void OnPropertyChanged([CallerMemberName] string? propertyName = null) => OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 
     public override int GetHashCode() => Id.GetHashCode();
     public override bool Equals(object? obj) => obj is IndexDirectoryBatch other && Equals(other);

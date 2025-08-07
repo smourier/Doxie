@@ -1,0 +1,106 @@
+﻿namespace Doxie;
+
+public partial class IndexingWindow : Window
+{
+    private readonly CancellationTokenSource _cts = new();
+    private readonly IndexDirectory _directory;
+    private bool _completed;
+    private bool _cancelled;
+    private bool _autoClose;
+
+    public IndexingWindow(IndexDirectory directory, bool autoClose)
+    {
+        ArgumentNullException.ThrowIfNull(directory);
+        _directory = directory;
+        _autoClose = autoClose;
+        InitializeComponent();
+        _ = Scan();
+    }
+
+    private void Cancel_Click(object sender, RoutedEventArgs e) => ConfirmClose(true);
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            ConfirmClose(true);
+            e.Handled = true;
+            return;
+        }
+        base.OnKeyDown(e);
+    }
+
+    private async Task Scan()
+    {
+        _directory.Index.FileIndexing += OnFileIndexing;
+        try
+        {
+            var request = new IndexScanRequest(_directory)
+            {
+                CancellationTokenSource = _cts
+            };
+            await _directory.Index.Scan(request).ConfigureAwait(false);
+            _completed = true;
+            _ = Dispatcher.BeginInvoke(() =>
+            {
+                if (_autoClose)
+                {
+                    Close();
+                    return;
+                }
+
+                if (_cancelled)
+                {
+                    statusText.Text = "Indexing was cancelled.";
+                }
+                else
+                {
+                    statusText.Text = "Indexing completed.";
+                }
+                cancel.Content = "Close";
+            });
+        }
+        finally
+        {
+            _directory.Index.FileIndexing -= OnFileIndexing;
+        }
+    }
+
+    private void OnFileIndexing(object? sender, FileIndexingEventArgs e) => Dispatcher.BeginInvoke(() =>
+    {
+        statusText.Text = Path.GetFileName(e.FilePath);
+    });
+
+    private bool ConfirmClose(bool canClose)
+    {
+        if (_completed)
+        {
+            if (canClose)
+            {
+                Close();
+            }
+
+            return true;
+        }
+
+        if (MessageBox.Show(this, $"Are you sure you want to cancel the '{_directory.Path}' directory indexing process?",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) != MessageBoxResult.Yes)
+            return false;
+
+        _cts.Cancel();
+        _cancelled = true;
+        return true;
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        if (!ConfirmClose(false))
+        {
+            e.Cancel = true;
+            return;
+        }
+    }
+}

@@ -1,10 +1,10 @@
 ﻿namespace Doxie.Model;
 
-public class IndexCreationRequest(string inputDirectoryPath)
+public class IndexScanRequest(IndexDirectory inputDirectory)
 {
-    public string InputDirectoryPath { get; } = inputDirectoryPath ?? throw new ArgumentNullException(nameof(inputDirectoryPath));
+    public IndexDirectory InputDirectory { get; } = inputDirectory ?? throw new ArgumentNullException(nameof(inputDirectory));
     public CancellationTokenSource? CancellationTokenSource { get; set; }
-    public IndexCreationRequestOptions Options { get; set; }
+    public IndexScanRequestOptions Options { get; set; }
     public virtual bool AsyncProcessing { get; set; } = true;
     public virtual string SearchPattern { get; set; } = "*.*";
     public virtual EnumerationOptions EnumerationOptions { get; set; } = new EnumerationOptions

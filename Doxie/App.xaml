@@ -20,5 +20,83 @@
         <SolidColorBrush x:Key="ButtonBackground" Color="#ebab34" />
         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#ebbd34" />
 
+        <Style TargetType="GroupBox">
+            <Style.Resources>
+                <ResourceDictionary />
+            </Style.Resources>
+            <Setter Property="Border.BorderBrush">
+                <Setter.Value>
+                    <SolidColorBrush>#ebbd34</SolidColorBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Border.BorderThickness">
+                <Setter.Value>
+                    <Thickness>1</Thickness>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GroupBox">
+                        <Grid SnapsToDevicePixels="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="6" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="6" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="6" />
+                            </Grid.RowDefinitions>
+                            <Border
+                                Grid.Row="1"
+                                Grid.RowSpan="3"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="4"
+                                Background="{TemplateBinding Panel.Background}"
+                                BorderBrush="#00FFFFFF"
+                                BorderThickness="{TemplateBinding Border.BorderThickness}"
+                                CornerRadius="4,4,4,4" />
+                            <Border
+                                Grid.Row="1"
+                                Grid.RowSpan="3"
+                                Grid.ColumnSpan="4"
+                                BorderBrush="#FFFFFFFF"
+                                BorderThickness="{TemplateBinding Border.BorderThickness}"
+                                CornerRadius="4,4,4,4"
+                                Opacity="0.2"
+                                >
+                            </Border>
+                            <Border
+                                Name="Header"
+                                Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Padding="3,1,3,0">
+                                <ContentPresenter
+                                    Content="{TemplateBinding HeaderedContentControl.Header}"
+                                    ContentSource="Header"
+                                    ContentStringFormat="{TemplateBinding HeaderedContentControl.HeaderStringFormat}"
+                                    ContentTemplate="{TemplateBinding HeaderedContentControl.HeaderTemplate}"
+                                    RecognizesAccessKey="True"
+                                    SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
+                            </Border>
+                            <ContentPresenter
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                Grid.ColumnSpan="2"
+                                Margin="{TemplateBinding Control.Padding}"
+                                Content="{TemplateBinding ContentControl.Content}"
+                                ContentStringFormat="{TemplateBinding ContentControl.ContentStringFormat}"
+                                ContentTemplate="{TemplateBinding ContentControl.ContentTemplate}"
+                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </Application.Resources>
 </Application>

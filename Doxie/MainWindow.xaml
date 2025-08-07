@@ -106,11 +106,6 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid x:Name="index">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition />
-            </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -126,39 +121,93 @@
                 Foreground="#E89644"
                 Text="{Binding Index.Name, StringFormat={}\'{0}\' Index}" />
 
-            <Button
-                x:Name="addDirectory"
+            <StackPanel
                 Grid.Row="1"
-                Margin="5"
-                Click="AddDirectory_Click">
-                Add directory to index...
-            </Button>
+                Margin="5,0,0,0"
+                Orientation="Horizontal">
+                <Button
+                    x:Name="addDirectory"
+                    Margin="5"
+                    Click="AddDirectory_Click">
+                    Add directory to index...
+                </Button>
 
-            <TextBlock Grid.Row="2" Margin="5">Included file extensions:</TextBlock>
-            <TextBlock
-                Grid.Row="2"
-                Grid.Column="1"
-                Text="{Binding Index.IncludedFileExtensions, Converter={StaticResource StringJoinConverter}}" />
-            <Button
-                x:Name="addIncludedExt"
-                Grid.Row="2"
-                Grid.Column="2"
-                Click="AddIncludedExt_Click">
-                Add...
-            </Button>
+                <Button
+                    x:Name="scanAllDirs"
+                    Margin="5"
+                    Click="ScanAllDirs_Click">
+                    Scan all directories
+                </Button>
+            </StackPanel>
+            <GroupBox Grid.Row="2" Header="Included file extensions">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Button
+                        x:Name="addIncludedExt"
+                        Margin="5"
+                        Click="AddIncludedExt_Click">
+                        Add...
+                    </Button>
+                    <ItemsControl
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        ItemsSource="{Binding Index.IncludedFileExtensions}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button
+                                    x:Name="removeIncludedExt"
+                                    Background="Transparent"
+                                    Click="RemoveIncludedExt_Click"
+                                    Content="{Binding}"
+                                    ToolTip="Click to remove" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Grid>
+            </GroupBox>
 
-            <TextBlock Grid.Row="3" Margin="5">Excluded directory names:</TextBlock>
-            <TextBlock
-                Grid.Row="3"
-                Grid.Column="1"
-                Text="{Binding Index.ExcludedDirectoryNames, Converter={StaticResource StringJoinConverter}}" />
-            <Button
-                x:Name="adddExcludedDir"
-                Grid.Row="3"
-                Grid.Column="2"
-                Click="AddExcludedDir_Click">
-                Add...
-            </Button>
+            <GroupBox Grid.Row="3" Header="Excluded directory names">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Button
+                        x:Name="adddExcludedDir"
+                        Margin="5"
+                        Click="AddExcludedDir_Click">
+                        Add...
+                    </Button>
+                    <ItemsControl
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        ItemsSource="{Binding Index.ExcludedDirectoryNames}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button
+                                    x:Name="removeDirectoryName"
+                                    Background="Transparent"
+                                    Click="RemoveDirectoryName_Click"
+                                    Content="{Binding}"
+                                    ToolTip="Click to remove" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Grid>
+            </GroupBox>
 
         </Grid>
 
@@ -198,9 +247,27 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBlock VerticalAlignment="Center" Text="{Binding Path}" />
-                            <Button Grid.Column="1">Delete</Button>
-                            <Button Grid.Column="2">Rescan</Button>
-                            <Button Grid.Column="3">Remap...</Button>
+                            <Button
+                                x:Name="deleteDir"
+                                Grid.Column="1"
+                                Margin="5"
+                                Click="DeleteDir_Click">
+                                Delete
+                            </Button>
+                            <Button
+                                x:Name="scanDir"
+                                Grid.Column="2"
+                                Margin="5"
+                                Click="ScanDir_Click">
+                                Scan
+                            </Button>
+                            <Button
+                                x:Name="remapDir"
+                                Grid.Column="3"
+                                Margin="5"
+                                Click="RemapDir_Click">
+                                Remap...
+                            </Button>
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
@@ -225,7 +292,7 @@
                 VerticalAlignment="Top"
                 FontSize="16"
                 Foreground="#E89644"
-                Text="Directory batches" />
+                Text="{Binding CurrentDirectory.Path, StringFormat={}Directory \'{0}\' indexing batches}" />
 
             <DataGrid
                 x:Name="batches"
@@ -378,6 +445,14 @@
             Background="#202020">
             <StatusBarItem>
                 <TextBlock Foreground="White" Text="{Binding Index.FilePath}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Foreground="White" Text="{Binding Index.FileSize, StringFormat={}{0} bytes}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Foreground="White" Text="{Binding Index.DocumentsCount, StringFormat={}{0} documents}" />
             </StatusBarItem>
             <StatusBarItem
                 x:Name="statusProgress"

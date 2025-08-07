@@ -1,6 +1,6 @@
 ﻿namespace Doxie.Model;
 
-public class IndexCreationResult
+public class IndexScanResult
 {
     public Exception? Exception { get; set; }
     public bool Success => Exception == null;

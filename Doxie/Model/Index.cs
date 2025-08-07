@@ -58,27 +58,53 @@ public class Index : INotifyPropertyChanged, IDisposable
     public bool IsReadOnly => _writer == null;
     public bool IsWriteOnly => !IsReadOnly;
     public bool IsIndexing { get; private set; }
+    public int DocumentsCount
+    {
+        get
+        {
+            if (_writer != null)
+                return _writer.NumDocs;
+
+            return _reader?.NumDocs ?? 0;
+        }
+    }
+
     public ObservableCollection<IndexDirectory> Directories { get; } = [];
     public ObservableCollection<string> IncludedFileExtensions { get; } = [];
     public ObservableCollection<string> ExcludedDirectoryNames { get; } = [];
 
+    public long FileSize
+    {
+        get
+        {
+            try
+            {
+                return new FileInfo(_sqlDirectory.Database.FilePath).Length;
+            }
+            catch (Exception)
+            {
+                return 0; // file might not exist or be inaccessible
+            }
+        }
+    }
+
     public override string ToString() => Name;
 
-    public Task<IndexCreationResult> AddToIndex(IndexCreationRequest request)
+    public Task<IndexScanResult> Scan(IndexScanRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!request.AsyncProcessing)
-            return Task.FromResult(DoCreateIndex(request));
+            return Task.FromResult(DoScan(request));
 
-        return Task.Run(() => DoCreateIndex(request));
+        return Task.Run(() => DoScan(request));
     }
 
-    private IndexCreationResult DoCreateIndex(IndexCreationRequest request)
+    private IndexScanResult DoScan(IndexScanRequest request)
     {
-        var result = new IndexCreationResult();
+        var result = new IndexScanResult();
         try
         {
-            DoCreateIndex(request, result);
+            DoScan(request, result);
         }
         catch (Exception ex)
         {
@@ -92,7 +118,7 @@ public class Index : INotifyPropertyChanged, IDisposable
 
     protected virtual void OnFileIndexing(object sender, FileIndexingEventArgs e) => FileIndexing?.Invoke(sender, e);
     protected virtual void OnPropertyChanged(object sender, PropertyChangedEventArgs e) => PropertyChanged?.Invoke(sender, e);
-    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) => OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+    public void OnPropertyChanged([CallerMemberName] string? propertyName = null) => OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 
     protected virtual void UpdateDirectories()
     {
@@ -106,13 +132,117 @@ public class Index : INotifyPropertyChanged, IDisposable
         ExcludedDirectoryNames.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_excludedDirectoryNames), [_dbSeparator]));
     }
 
-    protected virtual void DoCreateIndex(IndexCreationRequest request, IndexCreationResult result)
+    protected virtual void SaveIncludedFileExtensions() => _sqlDirectory.SaveSetting(_includedFileExtensions, string.Join(_dbSeparator, IncludedFileExtensions));
+    protected virtual void SaveExcludedDirectoryNames() => _sqlDirectory.SaveSetting(_excludedDirectoryNames, string.Join(_dbSeparator, ExcludedDirectoryNames));
+    protected virtual void SaveDirectory(IndexDirectory dir)
+    {
+        ArgumentNullException.ThrowIfNull(dir);
+        if (dir.Path == null)
+            throw new InvalidOperationException();
+
+        _sqlDirectory.Save(new Directory(_sqlDirectory.Database) { Path = dir.Path });
+    }
+
+    public virtual bool EnsureDirectory(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        var dir = new IndexDirectory(this, path);
+        if (Directories.Any(n => n.Path.EqualsIgnoreCase(path)))
+        {
+            SaveDirectory(dir);
+            return false;
+        }
+
+        Directories.Add(dir);
+        SaveDirectory(dir);
+        OnPropertyChanged(nameof(Directories));
+        return true;
+    }
+
+    public virtual bool RemoveDirectory(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        var dir = new IndexDirectory(this, path);
+        if (!Directories.Any(n => n.Path.EqualsIgnoreCase(path)))
+            return false;
+
+        Directories.Remove(dir);
+        DeleteDirectory(path);
+        OnPropertyChanged(nameof(Directories));
+        return true;
+    }
+
+    public virtual bool RemoveIncludedFileExtension(string ext)
+    {
+        ArgumentNullException.ThrowIfNull(ext);
+        if (!ext.StartsWith('.'))
+        {
+            ext = '.' + ext;
+        }
+
+        if (!IncludedFileExtensions.Any(n => n.EqualsIgnoreCase(ext)))
+            return false;
+
+        IncludedFileExtensions.Remove(ext);
+        SaveIncludedFileExtensions();
+        OnPropertyChanged(nameof(IncludedFileExtensions));
+        return true;
+    }
+
+    public virtual bool EnsureIncludedFileExtension(string ext)
+    {
+        ArgumentNullException.ThrowIfNull(ext);
+        if (!ext.StartsWith('.'))
+        {
+            ext = '.' + ext;
+        }
+
+        if (IncludedFileExtensions.Any(n => n.EqualsIgnoreCase(ext)))
+        {
+            SaveIncludedFileExtensions();
+            return false;
+        }
+
+        IncludedFileExtensions.Add(ext);
+        SaveIncludedFileExtensions();
+        OnPropertyChanged(nameof(IncludedFileExtensions));
+        return true;
+    }
+
+    public virtual bool RemoveExcludedDirectoryName(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        if (!ExcludedDirectoryNames.Any(n => n.EqualsIgnoreCase(name)))
+            return false;
+
+        ExcludedDirectoryNames.Remove(name);
+        SaveExcludedDirectoryNames();
+        OnPropertyChanged(nameof(ExcludedDirectoryNames));
+        return true;
+    }
+
+    public virtual bool EnsureExcludedDirectoryName(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        if (ExcludedDirectoryNames.Any(n => n.EqualsIgnoreCase(name)))
+        {
+            SaveExcludedDirectoryNames();
+            return false;
+        }
+
+        ExcludedDirectoryNames.Add(name);
+        SaveExcludedDirectoryNames();
+        OnPropertyChanged(nameof(ExcludedDirectoryNames));
+        return true;
+    }
+
+    protected virtual void DoScan(IndexScanRequest request, IndexScanResult result)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
 
-        EnsureDirectory(request);
-        var batch = new IndexDirectoryBatch(Guid.NewGuid(), request.InputDirectoryPath)
+        EnsureDirectory(request.InputDirectory.Path);
+        var batch = new IndexDirectoryBatch(request.InputDirectory, Guid.NewGuid())
         {
             StartTimeUtc = DateTime.UtcNow
         };
@@ -124,7 +254,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         var excludedExts = new HashSet<string>();
 
         var writer = GetWriter();
-        foreach (var entry in System.IO.Directory.EnumerateFileSystemEntries(request.InputDirectoryPath, request.SearchPattern, request.EnumerationOptions))
+        foreach (var entry in System.IO.Directory.EnumerateFileSystemEntries(request.InputDirectory.Path, request.SearchPattern, request.EnumerationOptions))
         {
             if (request.CancellationTokenSource?.IsCancellationRequested == true)
             {
@@ -174,7 +304,7 @@ public class Index : INotifyPropertyChanged, IDisposable
             idx.AddField(FieldExt, ext, true);
             idx.AddField(FieldBatchId, batch.Id.ToString("N"), true);
 
-            var relPath = Path.GetRelativePath(request.InputDirectoryPath, entry);
+            var relPath = Path.GetRelativePath(request.InputDirectory.Path, entry);
             idx.AddField(FieldPath, relPath, true);
 
             var doc = idx.FinishAndGetDocument();
@@ -192,14 +322,15 @@ public class Index : INotifyPropertyChanged, IDisposable
         Commit();
         if (VacuumOnCommit)
         {
-            _sqlDirectory.Database.Vacuum();
+            try
+            {
+                _sqlDirectory.Database.Vacuum();
+            }
+            catch
+            {
+                // continue regardless of vacuum failure
+            }
         }
-    }
-
-    protected virtual void EnsureDirectory(IndexCreationRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        _sqlDirectory.Save(new Directory(_sqlDirectory.Database) { Path = request.InputDirectoryPath });
     }
 
     protected virtual bool SaveDirectoryBatch(IndexDirectoryBatch batch)
@@ -207,13 +338,13 @@ public class Index : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(batch);
 
         // delete other batches' lucene documents
-        var batches = _sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", batch.Path);
+        var batches = _sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", batch.Directory.Path);
         foreach (var deleteDataBatch in batches.Where(b => b.Id != batch.Id))
         {
             DeleteDocuments(deleteDataBatch);
         }
 
-        var db = DirectoryBatch.From(new Directory(_sqlDirectory.Database) { Path = batch.Path }, batch);
+        var db = DirectoryBatch.From(new Directory(_sqlDirectory.Database) { Path = batch.Directory.Path }, batch);
         return _sqlDirectory.Save(db);
     }
 
@@ -239,6 +370,7 @@ public class Index : INotifyPropertyChanged, IDisposable
                 ret = true;
             }
             _sqlDirectory.Database.Commit();
+            OnPropertyChanged(nameof(Directories));
             return ret;
         }
         catch
@@ -411,10 +543,13 @@ public class Index : INotifyPropertyChanged, IDisposable
 
         public IndexDirectory ToIndexDirectory(Index index, Directory directory)
         {
-            var id = new IndexDirectory(directory.Path ?? string.Empty);
+            if (directory.Path == null)
+                throw new InvalidOperationException();
+
+            var id = new IndexDirectory(index, directory.Path);
             foreach (var batch in index._sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", directory.Path))
             {
-                id.Batches.Add(batch.ToIndexDirectoryBatch(directory));
+                id.Batches.Add(batch.ToIndexDirectoryBatch(id));
             }
             return id;
         }
@@ -439,9 +574,9 @@ public class Index : INotifyPropertyChanged, IDisposable
 
         public override string ToString() => Id.ToString();
 
-        public IndexDirectoryBatch ToIndexDirectoryBatch(Directory directory)
+        public IndexDirectoryBatch ToIndexDirectoryBatch(IndexDirectory directory)
         {
-            var batch = new IndexDirectoryBatch(Id, directory.Path!)
+            var batch = new IndexDirectoryBatch(directory, Id)
             {
                 Options = Options,
                 StartTimeUtc = StartTimeUtc,

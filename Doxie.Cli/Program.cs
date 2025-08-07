@@ -29,13 +29,13 @@ internal class Program
         };
 
         //var request = new IndexCreationRequest(@"E:\github\microsoft\VCSamples")
-        var request = new IndexCreationRequest(@"E:\smo\GitHub\Axxon")
+        var request = new IndexScanRequest(new IndexDirectory(index, @"E:\smo\GitHub\Axxon"))
         {
             CancellationTokenSource = cts
         };
-        index.IncludedFileExtensions.AddRange([".cs"]);
+        index.EnsureIncludedFileExtension(".cs");
 
-        var indexResult = await index.AddToIndex(request);
+        var indexResult = await index.Scan(request);
         if (indexResult.Exception != null)
         {
             Console.WriteLine(indexResult.Exception);

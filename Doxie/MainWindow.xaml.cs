@@ -11,7 +11,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         DataContext = this;
         _ = Task.Run(Settings.Current.CleanRecentFiles);
 
-        Extensions.SaveDefaultTemplate<Button>();
+        //Extensions.SaveDefaultTemplate<GroupBox>();
     }
 
     public Model.Index? Index { get; private set; }
@@ -66,27 +66,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 OpenIndex(lastRecent);
             }
-        }
-    }
-
-    protected override void OnClosing(CancelEventArgs e)
-    {
-        base.OnClosing(e);
-        var task = IndexingTask;
-        if (task != null && !task.IsCompleted && MessageBox.Show(
-                this,
-                $"Indexing is in progress, are you sure you want to exit?",
-                AssemblyUtilities.GetProduct(),
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question) != MessageBoxResult.Yes)
-        {
-            e.Cancel = true;
-            return;
-        }
-
-        if (task != null)
-        {
-            Task.WaitAll([task], 5000);
         }
     }
 
@@ -154,86 +133,64 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private async Task DoIndex(Model.Index index, IndexCreationRequest request)
-    {
-        _ = Dispatcher.BeginInvoke(() =>
-        {
-            statusProgress.Visibility = Visibility.Visible;
-        });
-        index.FileIndexing += OnFileIndexing;
-        try
-        {
-            await index.AddToIndex(request).ConfigureAwait(false);
-        }
-        finally
-        {
-            index.FileIndexing -= OnFileIndexing;
-            _ = Dispatcher.BeginInvoke(() =>
-            {
-                statusProgress.Visibility = Visibility.Hidden;
-            });
-        }
-    }
-
-    private void OnFileIndexing(object? sender, FileIndexingEventArgs e)
-    {
-        Dispatcher.BeginInvoke(() =>
-        {
-            statusProgress.Visibility = Visibility.Visible;
-            statusProgressText.Text = Path.GetFileName(e.FilePath);
-        });
-    }
-
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     private void ViewIncludedExts_Click(object sender, RoutedEventArgs e)
     {
         var batch = sender.GetDataContext<IndexDirectoryBatch>();
-        if (batch != null)
+        if (batch == null)
+            return;
+
+        var list = new ListWindow(batch.IncludedFileExtensions)
         {
-            var list = new ListWindow(batch.IncludedFileExtensions)
-            {
-                Owner = this,
-                Title = "View Included File Extensions"
-            };
-            list.ShowDialog();
-        }
+            Owner = this,
+            Title = "View Included File Extensions",
+        };
+        list.ShowDialog();
     }
 
     private void ViewNonIndexedExts_Click(object sender, RoutedEventArgs e)
     {
         var batch = sender.GetDataContext<IndexDirectoryBatch>();
-        if (batch != null)
+        if (batch == null)
+            return;
+
+        var extensions = batch.NonIndexedFileExtensions.ToHashSet();
+        if (Index != null)
         {
-            var list = new ListWindow(batch.NonIndexedFileExtensions)
+            foreach (var extension in Index.IncludedFileExtensions)
             {
-                Owner = this,
-                Title = "View Non-Indexed File Extensions",
-                ShowButton = true,
-                ButtonText = "Include",
-                IncludeAction = obj =>
-                {
-                    if (obj is string ext)
-                    {
-                    }
-                }
-            };
-            list.ShowDialog();
+                extensions.Remove(extension);
+            }
         }
+
+        var list = new ListWindow(extensions)
+        {
+            Owner = this,
+            Title = "View Non-Indexed File Extensions",
+            ShowButton = true,
+            ButtonText = "Include",
+            IncludeAction = ext =>
+            {
+                Index?.EnsureIncludedFileExtension(ext);
+                return true;
+            }
+        };
+        list.ShowDialog();
     }
 
     private void ViewExcludedDirs_Click(object sender, RoutedEventArgs e)
     {
         var batch = sender.GetDataContext<IndexDirectoryBatch>();
-        if (batch != null)
+        if (batch == null)
+            return;
+
+        var list = new ListWindow(batch.ExcludedDirectoryNames)
         {
-            var list = new ListWindow(batch.ExcludedDirectoryNames)
-            {
-                Owner = this,
-                Title = "View Excluded Directories",
-            };
-            list.ShowDialog();
-        }
+            Owner = this,
+            Title = "View Excluded Directories",
+        };
+        list.ShowDialog();
     }
 
     private void AddDirectory_Click(object sender, RoutedEventArgs e)
@@ -243,19 +200,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Title = "Select a directory to add to index",
             Multiselect = false
         };
-        if (fld.ShowDialog(this) != true)
-            return;
-
-        //var request = new IndexCreationRequest(fld.FolderName)
-        //{
-        //    CancellationTokenSource = new CancellationTokenSource()
-        //};
-        //_indexingTasks.Add(new WorkToDo(index, request, DoIndex(index, request)));
+        if (fld.ShowDialog(this) == true)
+        {
+            Index?.EnsureDirectory(fld.FolderName);
+        }
     }
 
     private void AddIncludedExt_Click(object sender, RoutedEventArgs e)
     {
-
+        var dlg = new AddExtensionWindow()
+        {
+            Owner = this,
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            var ext = dlg.Extension;
+            if (!string.IsNullOrWhiteSpace(ext) && Index != null)
+            {
+                Index.EnsureIncludedFileExtension(ext);
+            }
+        }
     }
 
     private void AddExcludedDir_Click(object sender, RoutedEventArgs e)
@@ -264,6 +228,130 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Owner = this,
         };
-        dlg.ShowDialog();
+        if (dlg.ShowDialog() == true)
+        {
+            var dirName = dlg.DirectoryName;
+            if (!string.IsNullOrWhiteSpace(dirName) && Index != null)
+            {
+                Index.EnsureExcludedDirectoryName(dirName);
+            }
+        }
+    }
+
+    private void DeleteDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = sender.GetDataContext<IndexDirectory>();
+        if (dir == null)
+            return;
+
+        if (MessageBox.Show(this, $"Are you sure you want to delete the '{dir.Path}' directory from the index?",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+
+        Index?.RemoveDirectory(dir.Path);
+    }
+
+    private void ScanDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = sender.GetDataContext<IndexDirectory>();
+        if (dir == null)
+            return;
+
+        if (MessageBox.Show(this, $"Are you sure you want to scan the '{dir.Path}' directory?",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+
+        var indexingWindow = new IndexingWindow(dir, false)
+        {
+            Owner = this
+        };
+
+        indexingWindow.ShowDialog();
+        OnPropertyChanged(nameof(Index));
+        OnDirectoriesSelectionChanged(null!, null!);
+    }
+
+    private void RemapDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = sender.GetDataContext<IndexDirectory>();
+        if (dir == null)
+            return;
+
+        var fld = new OpenFolderDialog
+        {
+            Title = "Select a directory",
+            Multiselect = false
+        };
+        if (fld.ShowDialog(this) != true)
+            return;
+
+        if (MessageBox.Show(this, $"Are you sure you want to change '{dir.Path}' directory to {fld.FolderName}?",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+    }
+
+    private void RemoveIncludedExt_Click(object sender, RoutedEventArgs e)
+    {
+        var ext = sender.GetDataContext<string>();
+        if (ext == null)
+            return;
+
+        if (MessageBox.Show(this, $"Are you sure you want to remove the '{ext}' extension?",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+
+        Index?.RemoveIncludedFileExtension(ext);
+    }
+
+    private void RemoveDirectoryName_Click(object sender, RoutedEventArgs e)
+    {
+        var dirName = sender.GetDataContext<string>();
+        if (dirName == null)
+            return;
+
+        if (MessageBox.Show(this, $"Are you sure you want to remove the '{dirName}' directory name?",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+
+        Index?.RemoveExcludedDirectoryName(dirName);
+    }
+
+    private void ScanAllDirs_Click(object sender, RoutedEventArgs e)
+    {
+        if (Index == null || Index.Directories.Count == 0)
+            return;
+
+        var sw = Stopwatch.StartNew();
+        foreach (var dir in Index.Directories)
+        {
+            var indexingWindow = new IndexingWindow(dir, true)
+            {
+                Owner = this
+            };
+
+            indexingWindow.ShowDialog();
+            OnPropertyChanged(nameof(Index));
+            OnDirectoriesSelectionChanged(null!, null!);
+        }
+
+        MessageBox.Show(this, $"All directories have been processed successfully in {sw.Elapsed}",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 }
