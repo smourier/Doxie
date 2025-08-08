@@ -1,6 +1,4 @@
-﻿using System.Threading;
-
-namespace Doxie.Cli;
+﻿namespace Doxie.Cli;
 
 internal class Program
 {

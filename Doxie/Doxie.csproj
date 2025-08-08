@@ -14,11 +14,22 @@
 
 	<ItemGroup>
 	  <None Remove="Resources\Doxie.png" />
+	  <None Remove="Resources\index.html" />
+	  <None Remove="Resources\vs.0.52.2.zip" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="Resources\index.html" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="Resources\vs.0.52.2.zip" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
-		<PackageReference Include="System.IO.Hashing" Version="9.0.7" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3351.48" />
+		<PackageReference Include="System.IO.Hashing" Version="9.0.8" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -27,8 +38,11 @@
 
 	<ItemGroup>
 		<Using Include="Doxie.Model" />
+		<Using Include="Doxie.Monaco" />
+		<Using Include="Doxie.Resources" />
 		<Using Include="Doxie.Utilities" />
-		<Using Include="Lucene.Net.Store" />
+		<Using Include="Microsoft.Web.WebView2.Core" />
+		<Using Include="Microsoft.Web.WebView2.Wpf" />
 		<Using Include="Microsoft.Win32" />
 		<Using Include="System" />
 		<Using Include="System.Collections" />
@@ -41,6 +55,7 @@
 		<Using Include="System.Globalization" />
 		<Using Include="System.Linq" />
 		<Using Include="System.IO" />
+		<Using Include="System.IO.Compression" />
 		<Using Include="System.IO.Hashing" />
 		<Using Include="System.Numerics" />
 		<Using Include="System.Reflection" />
@@ -49,10 +64,12 @@
 		<Using Include="System.Runtime.InteropServices" />
 		<Using Include="System.Security.Cryptography" />
 		<Using Include="System.Text" />
+		<Using Include="System.Text.RegularExpressions" />
 		<Using Include="System.Text.Json" />
 		<Using Include="System.Text.Json.Serialization" />
 		<Using Include="System.Threading" />
 		<Using Include="System.Threading.Tasks" />
+		<Using Include="System.Xml" />
 		<Using Include="System.Windows" />
 		<Using Include="System.Windows.Controls" />
 		<Using Include="System.Windows.Controls.Primitives" />

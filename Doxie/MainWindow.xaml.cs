@@ -373,6 +373,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void QueryIndex_Click(object sender, RoutedEventArgs e)
     {
+        if (Index == null)
+            return;
 
+        var search = Model.Index.OpenRead(Index.FilePath);
+        var queryWindow = new QueryWindow(search)
+        {
+            Owner = this,
+            Width = Width - 40,
+            Height = Height - 40,
+        }
+        ;
+        queryWindow.Show();
     }
 }

@@ -2,9 +2,12 @@
 
 internal static class Program
 {
+    internal static Task _monacoInstalledTask = null!;
+
     [STAThread]
     static void Main()
     {
+        _monacoInstalledTask = MonacoResources.EnsureMonacoFilesAsync();
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         var app = new App();

@@ -1,6 +1,4 @@
-﻿using System.Xml;
-
-namespace Doxie.Utilities;
+﻿namespace Doxie.Utilities;
 
 public static class Extensions
 {

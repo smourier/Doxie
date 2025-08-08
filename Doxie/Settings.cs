@@ -8,6 +8,9 @@ public class Settings : Serializable<Settings>
     public static Settings Current { get; }
     public static string ConfigurationFilePath { get; }
     public static string PerceivedTypesFilePath { get; }
+    public static string TempDirectoryPath { get; }
+
+    internal const uint _defaultMaxLoadBufferSize = 65536 * 16;
 
     static Settings()
     {
@@ -16,6 +19,7 @@ public class Settings : Serializable<Settings>
 
         ConfigurationFilePath = Path.Combine(path, FileName);
         PerceivedTypesFilePath = Path.Combine(path, PerceivedTypesFileName);
+        TempDirectoryPath = Path.Combine(Path.GetTempPath(), typeof(Settings).Namespace!);
 
         // build settings
         Current = Deserialize(ConfigurationFilePath)!;
@@ -72,6 +76,19 @@ public class Settings : Serializable<Settings>
             }
         }
     }
+
+    // "vs", "vs-dark", "hc-light", "hc-black" 
+    [DefaultValue("vs-dark")]
+    public virtual string MonacoTheme { get => GetPropertyValue("vs-dark")!; set { SetPropertyValue(value); } }
+
+    [DefaultValue(13d)]
+    public virtual double MonacoFontSize { get => GetPropertyValue(13d); set { SetPropertyValue(value); } }
+
+    [DefaultValue(true)]
+    public virtual bool MonacoShowMinimap { get => GetPropertyValue(true); set { SetPropertyValue(value); } }
+
+    [DefaultValue(EncodingDetectorMode.AutoDetect)]
+    public virtual EncodingDetectorMode EncodingDetectorMode { get => GetPropertyValue(EncodingDetectorMode.AutoDetect); set { SetPropertyValue(value); } }
 
     private Dictionary<string, DateTime> GetRecentFiles()
     {

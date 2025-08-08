@@ -1,4 +1,5 @@
-﻿using SqlNado;
+﻿using Lucene.Net.Store;
+using SqlNado;
 using SqlNado.Utilities;
 
 namespace Doxie.Model;

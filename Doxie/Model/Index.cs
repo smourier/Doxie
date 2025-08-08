@@ -297,14 +297,16 @@ public class Index : INotifyPropertyChanged, IDisposable
                 continue;
             }
 
+            var relPath = Path.GetRelativePath(request.InputDirectory.Path, entry);
             var file = File.ReadAllText(entry);
 
+            var pathForIndex = relPath;
+
             var idx = new IndexDocument(DefaultFieldName);
-            idx.AddField(DefaultFieldName, file.Trim());
+            idx.AddField(DefaultFieldName, pathForIndex + " " + file.Trim());
             idx.AddField(FieldExt, ext, true);
             idx.AddField(FieldBatchId, batch.Id.ToString("N"), true);
 
-            var relPath = Path.GetRelativePath(request.InputDirectory.Path, entry);
             idx.AddField(FieldPath, relPath, true);
 
             var doc = idx.FinishAndGetDocument();

@@ -1713,4 +1713,126 @@ public static class Conversions
             return true;
         }
     }
+
+    public static string? GetNullifiedValue(this JsonElement element, string jsonPath) => GetValue<string>(element, jsonPath, null).Nullify();
+    public static string? GetNullifiedValue(this IDictionary<string, JsonElement> element, string key, string? defaultValue = null, IFormatProvider? provider = null)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+
+        if (element == null)
+            return defaultValue.Nullify();
+
+        if (!element.TryGetValue(key, out var o))
+            return defaultValue;
+
+        return ChangeType(o, defaultValue, provider).Nullify();
+    }
+
+    public static T? GetValue<T>(this JsonElement element, string jsonPath, T? defaultValue = default)
+    {
+        if (!TryGetValue<T>(element, jsonPath, out var value))
+            return defaultValue;
+
+        return value;
+    }
+
+    public static bool TryGetValue<T>(this JsonElement element, string jsonPath, out T? value)
+    {
+        if (!TryGetObjectValue(element, jsonPath, out var obj))
+        {
+            value = default;
+            return false;
+        }
+
+        return TryChangeType(obj, out value);
+    }
+
+    public static bool TryGetObjectValue(this JsonElement element, string jsonPath, out object? value)
+    {
+        ArgumentNullException.ThrowIfNull(jsonPath);
+
+        if (element.TryGetProperty(jsonPath, out var directElement))
+        {
+            value = directElement.ToObject();
+            return true;
+        }
+
+        value = null;
+        var segments = jsonPath.Split('.');
+        var current = element;
+        for (var i = 0; i < segments.Length; i++)
+        {
+            var segment = segments[i].Nullify();
+            if (segment == null)
+                return false;
+
+            if (!current.TryGetProperty(segment, out var newElement))
+                return false;
+
+            if (i == segments.Length - 1)
+            {
+                value = newElement.ToObject();
+                return true;
+            }
+            current = newElement;
+        }
+        return false;
+    }
+
+    public static object? ToObject(this JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Null:
+                return null;
+
+            case JsonValueKind.Object:
+                var dic = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                foreach (var child in element.EnumerateObject())
+                {
+                    dic[child.Name] = ToObject(child.Value);
+                }
+                return dic;
+
+            case JsonValueKind.Array:
+                var objects = new object?[element.GetArrayLength()];
+                var i = 0;
+                foreach (var child in element.EnumerateArray())
+                {
+                    objects[i++] = ToObject(child);
+                }
+                return objects;
+
+            case JsonValueKind.String:
+                var str = element.ToString();
+                if (DateTime.TryParseExact(str, ["o", "r", "s"], null, DateTimeStyles.None, out var dt))
+                    return dt;
+
+                return str;
+
+            case JsonValueKind.Number:
+                if (element.TryGetInt32(out var i32))
+                    return i32;
+
+                if (element.TryGetInt32(out var i64))
+                    return i64;
+
+                if (element.TryGetDecimal(out var dec))
+                    return dec;
+
+                if (element.TryGetDouble(out var dbl))
+                    return dbl;
+
+                throw new NotSupportedException();
+
+            case JsonValueKind.True:
+                return true;
+
+            case JsonValueKind.False:
+                return false;
+
+            default:
+                throw new NotSupportedException();
+        }
+    }
 }
