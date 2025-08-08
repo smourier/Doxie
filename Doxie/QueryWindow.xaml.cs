@@ -5,13 +5,14 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private string _query = string.Empty;
-    private string? _relativeFilePath;
+    private IndexSearchResultItem? _item;
     private int _totalHits;
     private readonly Task _webView2Initialized;
     private readonly EditorControlObject _eco = new();
     private char[]? _buffer;
     private int? _bufferSize;
     private StreamReader? _reader;
+    private string? _modelLanguageName;
 
     public QueryWindow(Model.Index index)
     {
@@ -28,18 +29,34 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     }
 
     public Model.Index Index { get; }
-    public ObservableCollection<string> Files { get; } = [];
-    public string? ModelLanguageId { get; private set; }
-    public string? ModelLanguageName { get; private set; }
-    public string? RelativeFilePath
+    public ObservableCollection<IndexSearchResultItem> Results { get; } = [];
+    public string? ModelLanguageName
     {
-        get => _relativeFilePath;
-        set
+        get => _modelLanguageName;
+        private set
         {
-            if (_relativeFilePath == value)
+            if (_modelLanguageName == value)
                 return;
 
-            _relativeFilePath = value;
+            _modelLanguageName = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public IndexSearchResultItem? Item
+    {
+        get => _item;
+        set
+        {
+            if (value == null)
+            {
+                if (_item == null)
+                    return;
+            }
+            else if (_item != null && _item.Path.EqualsIgnoreCase(value.Path))
+                return;
+
+            _item = value;
             OnPropertyChanged();
         }
     }
@@ -66,18 +83,25 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                 return;
 
             _query = value;
-            Files.Clear();
+            Results.Clear();
             TotalHits = 0;
-            RelativeFilePath = null;
+            Item = null;
 
             if (!string.IsNullOrWhiteSpace(_query))
             {
                 var result = Index.Search<IndexSearchResultItem>(_query);
                 TotalHits = result.TotalHits;
-                var files = result.Items.Select(i => i.RelativePath).WhereNotNull().OrderBy(i => i);
-                Files.AddRange(files);
+                var files = result.Items.OrderBy(i => i.RelativePath);
+                Results.AddRange(files);
             }
         }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        _reader?.Dispose();
+        webView?.Dispose();
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -86,15 +110,16 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     {
         await _webView2Initialized;
 
-        if (filesList.SelectedItem is not string path)
+        if (filesList.SelectedItem is not IndexSearchResultItem item || item.Path == null || !IOUtilities.PathIsFile(item.Path))
         {
             webView.Visibility = Visibility.Hidden;
-            RelativeFilePath = null;
+            Item = null;
             return;
         }
 
         webView.Visibility = Visibility.Visible;
-        RelativeFilePath = path;
+        Item = item;
+        _ = LoadFile(item);
     }
 
     private async void CoreWebView2InitializationCompleted(object? sender, CoreWebView2InitializationCompletedEventArgs e)
@@ -105,28 +130,43 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         webView.Source = new Uri(MonacoResources.IndexFilePath);
     }
 
-    private async Task<bool> LoadFile()
+    private async Task<bool> LoadFile(IndexSearchResultItem item)
     {
-        if (RelativeFilePath == null)
+        if (item.Path == null || !IOUtilities.PathIsFile(item.Path))
             return false;
 
-        var filePath = Path.Combine(Index.FilePath, RelativeFilePath);
-        var encoding = EncodingDetector.DetectEncoding(filePath, Settings.Current.EncodingDetectorMode);
+        try
+        {
+            var encoding = EncodingDetector.DetectEncoding(item.Path, Settings.Current.EncodingDetectorMode);
 
-        _reader?.Dispose();
-        _reader = new StreamReader(filePath, encoding);
-        var max = Settings._defaultMaxLoadBufferSize;
+            _reader?.Dispose();
+            _reader = new StreamReader(item.Path, encoding);
+            var max = Settings._defaultMaxLoadBufferSize;
 
-        _bufferSize = (int)Math.Min(_reader.BaseStream.Length, max);
-        await webView.ExecuteScriptAsync($"loadFromHost()");
+            _bufferSize = (int)Math.Min(_reader.BaseStream.Length, max);
+            await webView.ExecuteScriptAsync($"loadFromHost()");
 
-        await SetEditorPosition();
-        return true;
+            await SetEditorPosition();
+            await MoveEditorTo(1, 1);
+            await SetLanguage(item);
+
+            await HighlightRanges([new MonacoRange(2, 4, 3, 6)]);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            _reader?.Dispose();
+            _reader = null;
+            _buffer = null;
+            _bufferSize = null;
+            return false;
+        }
     }
 
     private void EditorControlOnLoad(object? sender, EditorControlLoadEventArgs e)
     {
-        if (_buffer == null || _reader == null || !_bufferSize.HasValue)
+        if (_reader == null || !_bufferSize.HasValue)
         {
             e.DocumentText = null;
             _reader?.Dispose();
@@ -156,43 +196,35 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private Task<string> SetEditorTheme(string? theme = null) { theme = theme.Nullify() ?? "vs-dark"; return webView.ExecuteScriptAsync($"monaco.editor.setTheme('{theme}')"); }
     private async Task<string> FocusEditor() { var result = await webView.ExecuteScriptAsync("editor.focus()"); webView.Focus(); return result; }
     private Task<string> SetEditorLanguage(string? lang) => webView.ExecuteScriptAsync($"monaco.editor.setModelLanguage(editor.getModel(), '{lang.Nullify() ?? LanguageExtensionPoint.DefaultLanguageId}');");
-    private async Task<string> SetEditorPosition(int lineNumber = 0, int column = 0) => await webView.ExecuteScriptAsync("editor.setPosition({lineNumber:" + lineNumber + ",column:" + column + "})");
-
-    private async Task SetLanguage()
+    private Task<string> SetEditorPosition(int lineNumber = 0, int column = 0) => webView.ExecuteScriptAsync("editor.setPosition({lineNumber:" + lineNumber + ",column:" + column + "})");
+    private Task<string> MoveEditorTo(int? line = null, int? column = null) => webView.ExecuteScriptAsync($"moveEditorTo({column}, {line})");
+    private Task<string> HighlightRanges(IEnumerable<MonacoRange> ranges)
     {
-        if (ModelLanguageId != null)
+        var json = JsonSerializer.Serialize(ranges);
+        return webView.ExecuteScriptAsync($"highlightRanges('{json}')");
+    }
+
+    private async Task SetLanguage(IndexSearchResultItem item)
+    {
+        if (item.Extension == null)
         {
-            await SetEditorLanguage(ModelLanguageId);
+            await SetEditorLanguage(null);
         }
         else
         {
-            if (RelativeFilePath == null)
-            {
-                await SetEditorLanguage(null);
-            }
-            else
-            {
-                await SetEditorLanguage(MonacoExtensions.GetLanguageByExtension(Path.GetExtension(RelativeFilePath)));
-            }
+            await SetEditorLanguage(MonacoExtensions.GetLanguageByExtension(item.Extension));
         }
 
         var id = await webView.ExecuteScriptAsync("editor.getModel().getLanguageId()");
         id = MonacoExtensions.UnescapeEditorText(id);
-        SetLanguageId(id);
-    }
-
-    private void SetLanguageId(string? id)
-    {
         if (id != null)
         {
             var text = MonacoExtensions.GetLanguageName(id);
             ModelLanguageName = text ?? id;
-            ModelLanguageId = id;
         }
         else
         {
             ModelLanguageName = string.Empty;
-            ModelLanguageId = string.Empty;
         }
     }
 
@@ -209,10 +241,13 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                 await EnableMinimap(Settings.Current.MonacoShowMinimap);
                 await SetEditorTheme(Settings.Current.MonacoTheme);
                 await FocusEditor();
-                if (!await LoadFile())
-                    return;
 
-                await SetLanguage();
+                var item = Item;
+                if (item != null)
+                {
+                    if (!await LoadFile(item))
+                        return;
+                }
                 break;
         }
     }

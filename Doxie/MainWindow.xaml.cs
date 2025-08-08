@@ -11,7 +11,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         DataContext = this;
         _ = Task.Run(Settings.Current.CleanRecentFiles);
 
-        //Extensions.SaveDefaultTemplate<GroupBox>();
+        //Extensions.SaveDefaultTemplate<GridSplitter>();
     }
 
     public Model.Index? Index { get; private set; }
@@ -291,28 +291,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         indexingWindow.ShowDialog();
         OnPropertyChanged(nameof(Index));
         OnDirectoriesSelectionChanged(null!, null!);
-    }
-
-    private void RemapDir_Click(object sender, RoutedEventArgs e)
-    {
-        var dir = sender.GetDataContext<IndexDirectory>();
-        if (dir == null)
-            return;
-
-        var fld = new OpenFolderDialog
-        {
-            Title = "Select a directory",
-            Multiselect = false
-        };
-        if (fld.ShowDialog(this) != true)
-            return;
-
-        if (MessageBox.Show(this, $"Are you sure you want to change '{dir.Path}' directory to {fld.FolderName}?",
-            AssemblyUtilities.GetProduct(),
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No) != MessageBoxResult.Yes)
-            return;
     }
 
     private void RemoveIncludedExt_Click(object sender, RoutedEventArgs e)

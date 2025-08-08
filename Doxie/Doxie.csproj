@@ -27,6 +27,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Lucene.Net.Highlighter" Version="4.8.0-beta00017" />
 		<PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3351.48" />
 		<PackageReference Include="System.IO.Hashing" Version="9.0.8" />

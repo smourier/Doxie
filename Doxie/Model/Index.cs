@@ -2,6 +2,7 @@
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers.Classic;
 using Lucene.Net.Search;
+using Lucene.Net.Search.Highlight;
 using Lucene.Net.Util;
 using SqlNado;
 
@@ -11,7 +12,8 @@ public class Index : INotifyPropertyChanged, IDisposable
 {
     public const string FileExtension = ".doxidx";
     public const string DefaultFieldName = "corpus";
-    public const string FieldPath = "path";
+    public const string FieldRelPath = "relPath";
+    public const string FieldDir = "dir";
     public const string FieldExt = "ext";
     public const string FieldBatchId = "batchId";
 
@@ -21,7 +23,7 @@ public class Index : INotifyPropertyChanged, IDisposable
     private const string _excludedDirectoryNames = "excludedDirectoryNames";
     private const char _dbSeparator = '|';
 
-    public event EventHandler<FileIndexingEventArgs>? FileIndexing;
+    public event EventHandler<IndexingEventArgs>? FileIndexing;
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private readonly SqliteDirectory _sqlDirectory;
@@ -116,7 +118,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         return result;
     }
 
-    protected virtual void OnFileIndexing(object sender, FileIndexingEventArgs e) => FileIndexing?.Invoke(sender, e);
+    protected virtual void OnFileIndexing(object sender, IndexingEventArgs e) => FileIndexing?.Invoke(sender, e);
     protected virtual void OnPropertyChanged(object sender, PropertyChangedEventArgs e) => PropertyChanged?.Invoke(sender, e);
     public void OnPropertyChanged([CallerMemberName] string? propertyName = null) => OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 
@@ -285,7 +287,7 @@ public class Index : INotifyPropertyChanged, IDisposable
             //}
 
             batch.EndTimeUtc = DateTime.UtcNow;
-            var e = new FileIndexingEventArgs(batch, entry);
+            var e = new IndexingEventArgs(batch, entry);
             OnFileIndexing(this, e);
             if (e.Cancel)
                 continue;
@@ -306,8 +308,8 @@ public class Index : INotifyPropertyChanged, IDisposable
             idx.AddField(DefaultFieldName, pathForIndex + " " + file.Trim());
             idx.AddField(FieldExt, ext, true);
             idx.AddField(FieldBatchId, batch.Id.ToString("N"), true);
-
-            idx.AddField(FieldPath, relPath, true);
+            idx.AddField(FieldDir, request.InputDirectory.Path, true);
+            idx.AddField(FieldRelPath, relPath, true);
 
             var doc = idx.FinishAndGetDocument();
             writer.AddDocument(doc);
@@ -459,6 +461,13 @@ public class Index : INotifyPropertyChanged, IDisposable
         };
 
         var qry = parser.Parse(text);
+        var scorer = new QueryScorer(qry);
+        var highlighter = new Highlighter(scorer)
+        {
+            TextFragmenter = new SimpleFragmenter(1000) // fragment size
+        };
+        highlighter.g
+
         var topDocs = _searcher.Search(qry, maximumDocuments);
 
         var result = new SearchResult<T>

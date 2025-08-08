@@ -4,9 +4,9 @@ public partial class IndexingWindow : Window
 {
     private readonly CancellationTokenSource _cts = new();
     private readonly IndexDirectory _directory;
+    private readonly bool _autoClose;
     private bool _completed;
     private bool _cancelled;
-    private bool _autoClose;
 
     public IndexingWindow(IndexDirectory directory, bool autoClose)
     {
@@ -65,7 +65,7 @@ public partial class IndexingWindow : Window
         }
     }
 
-    private void OnFileIndexing(object? sender, FileIndexingEventArgs e) => Dispatcher.BeginInvoke(() =>
+    private void OnFileIndexing(object? sender, IndexingEventArgs e) => Dispatcher.BeginInvoke(() =>
     {
         statusText.Text = Path.GetFileName(e.FilePath);
     });
