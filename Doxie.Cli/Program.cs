@@ -55,7 +55,7 @@ internal class Program
                 Console.WriteLine($"  Indexing skipped folders: {batch.NumberOfSkippedDirectories}");
                 Console.WriteLine($"  Indexing has skipped the following non text extensions: {string.Join(", ", batch.NonIndexedFileExtensions)}");
                 Console.WriteLine($"  Indexing took {batch.Duration}.");
-                if (batch.Options.HasFlag(IndexDirectoryBatchOptions.WasCancelled))
+                if (batch.Options.HasFlag(IndexDirectoryBatchOptions.IndexingWasCancelled))
                 {
                     Console.WriteLine($"  Indexing was cancelled.");
                 }

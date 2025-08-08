@@ -141,7 +141,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (batch == null)
             return;
 
-        var list = new ListWindow(batch.IncludedFileExtensions)
+        var list = new ListWindow(batch.IncludedFileExtensions.Select(ext => new ListItem(ext)))
         {
             Owner = this,
             Title = "View Included File Extensions",
@@ -164,19 +164,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         }
 
-        var list = new ListWindow(extensions)
+        var list = new ListWindow(extensions.Select(e => new ListItem(e)
+        {
+            ShowButton = true,
+            ButtonText = "Include",
+            Description = getDesc(e),
+            Action = () =>
+            {
+                Index?.EnsureIncludedFileExtension(e);
+                return true;
+            }
+        }))
         {
             Owner = this,
             Title = "View Non-Indexed File Extensions",
-            ShowButton = true,
-            ButtonText = "Include",
-            IncludeAction = ext =>
-            {
-                Index?.EnsureIncludedFileExtension(ext);
-                return true;
-            }
-        };
+            SortByDescriptionButtonText = "Sort by perceived type",
+            SortByNameButtonText = "Sort by extension",
+        }
+        ;
         list.ShowDialog();
+
+        static string? getDesc(string ext)
+        {
+            var perceived = Perceived.GetPerceivedType(ext);
+            if (perceived.PerceivedType == PerceivedType.Unknown ||
+                perceived.PerceivedType == PerceivedType.Unspecified)
+                return null;
+
+            return Conversions.Decamelize(perceived.PerceivedType.ToString());
+        }
     }
 
     private void ViewExcludedDirs_Click(object sender, RoutedEventArgs e)
@@ -185,7 +201,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (batch == null)
             return;
 
-        var list = new ListWindow(batch.ExcludedDirectoryNames)
+        var list = new ListWindow(batch.ExcludedDirectoryNames.Select(name => new ListItem(name)))
         {
             Owner = this,
             Title = "View Excluded Directories",
@@ -353,5 +369,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             AssemblyUtilities.GetProduct(),
             MessageBoxButton.OK,
             MessageBoxImage.Information);
+    }
+
+    private void QueryIndex_Click(object sender, RoutedEventArgs e)
+    {
+
     }
 }

@@ -3,9 +3,11 @@
 public class Settings : Serializable<Settings>
 {
     public const string FileName = "settings.json";
+    public const string PerceivedTypesFileName = "perceivedTypes.json";
 
     public static Settings Current { get; }
     public static string ConfigurationFilePath { get; }
+    public static string PerceivedTypesFilePath { get; }
 
     static Settings()
     {
@@ -13,6 +15,7 @@ public class Settings : Serializable<Settings>
         var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), typeof(Settings).Namespace!);
 
         ConfigurationFilePath = Path.Combine(path, FileName);
+        PerceivedTypesFilePath = Path.Combine(path, PerceivedTypesFileName);
 
         // build settings
         Current = Deserialize(ConfigurationFilePath)!;

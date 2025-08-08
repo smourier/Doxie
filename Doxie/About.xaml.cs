@@ -21,5 +21,4 @@ public partial class About : Window
     }
 
     private void OK_Click(object sender, RoutedEventArgs e) => Close();
-    private void Details_Click(object sender, RoutedEventArgs e) { }
 }

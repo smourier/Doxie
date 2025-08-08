@@ -1,0 +1,514 @@
+{
+  "ReadHardCodedValuesBefore": true,
+  "ReadHardCodedValuesAfter": false,
+  "PerceivedTypes": [
+    {
+      "Extension": ".rtf",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".vbhtml",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".ashx",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".wixlib",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".isl",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".cmd",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".svc",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".sqlsettings",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".svcmap",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".readme",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".nupkg",
+      "PerceivedType": 5
+    },
+    {
+      "Extension": ".vb",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".yaml",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".fsproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".go",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".rs",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".iqy",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".rdl",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".vbproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".webpart",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".7z",
+      "PerceivedType": 5
+    },
+    {
+      "Extension": ".licx",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".props",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".xaml",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".cs",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".md",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".py",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".wxi",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".cxx",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".sqldeployment",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".disco",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".manifest",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".vcxproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".diagram",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".asmx",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".ini",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".tpl",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".cpp",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".dproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".sqlcmdvars",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".wsdl",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".xslt",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".inf",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".crproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".c",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".rar",
+      "PerceivedType": 5
+    },
+    {
+      "Extension": ".bas",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".pas",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".cob",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".json",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".eml",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".tplxaml",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".proj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".rzt",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".sitemap",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".ascx",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".modelproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".tcl",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".vsconfig",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".asp",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".isproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".nuspec",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".wapproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".appxmanifest",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".h",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".shproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".class",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".vdproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".edmx",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".xsd",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".dll",
+      "PerceivedType": 8
+    },
+    {
+      "Extension": ".wxl",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".sh",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".exe",
+      "PerceivedType": 8
+    },
+    {
+      "Extension": ".cfg",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".spdata",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".html",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".vbp",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".reg",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".dbproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".cshtml",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".bat",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".pdb",
+      "PerceivedType": -3
+    },
+    {
+      "Extension": ".vixproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".resx",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".sln",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".frm",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".js",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".java",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".pbxproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".cbl",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".svcinfo",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".css",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".master",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".package",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".btproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".cbproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".wxs",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".deploymanifest",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".hxx",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".vcproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".l4g",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".csproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".plist",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".dotsettings",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".dacpac",
+      "PerceivedType": 5
+    },
+    {
+      "Extension": ".storyboard",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".dbschema",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".hpp",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".targets",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".asax",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".sql",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".htm",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".snippet",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".sqlproj",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".editorconfig",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".psm1",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".psd1",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".yml",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".log",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".vbs",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".axml",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".schemaview",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".fs",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".xsl",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".ps1",
+      "PerceivedType": 1
+    },
+    {
+      "Extension": ".config",
+      "PerceivedType": 1
+    }
+  ]
+}

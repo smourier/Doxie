@@ -11,4 +11,7 @@ public enum PerceivedTypeSource
     WmSdk = 0x0020,
     ZipFolder = 0x0040,
     Mime = 0x0080,
+
+    // doxie specific
+    DoxieSettings = 0x10000000,
 }

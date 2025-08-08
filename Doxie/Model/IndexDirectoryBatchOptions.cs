@@ -3,7 +3,8 @@
 [Flags]
 public enum IndexDirectoryBatchOptions
 {
+    [Description("")]
     None = 0x0,
-    WasCancelled = 0x1,
+    IndexingWasCancelled = 0x1,
     DataWasDeleted = 0x2,
 }

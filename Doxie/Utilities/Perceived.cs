@@ -66,8 +66,22 @@ public sealed class Perceived(string extension)
     }
 
     private static readonly ConcurrentDictionary<string, Perceived> _perceivedTypes = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly JsonSerializerOptions _options = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
-    static Perceived()
+    private sealed class PerceivedTypesFile
+    {
+        public bool ReadHardCodedValuesBefore { get; set; } = true;
+        public bool ReadHardCodedValuesAfter { get; set; }
+        public IList<PerceivedTypeItem> PerceivedTypes { get; set; } = [];
+    }
+
+    private sealed class PerceivedTypeItem
+    {
+        public string Extension { get; set; } = null!;
+        public PerceivedType PerceivedType { get; set; }
+    }
+
+    static void ReadHardcodedPerceivedTypes()
     {
         AddPerceived(".appxmanifest", PerceivedType.Text);
         AddPerceived(".asax", PerceivedType.Text);
@@ -77,11 +91,14 @@ public sealed class Perceived(string extension)
         AddPerceived(".asp", PerceivedType.Text);
         AddPerceived(".axml", PerceivedType.Text);
         AddPerceived(".bas", PerceivedType.Text);
+        AddPerceived(".bash", PerceivedType.Text);
         AddPerceived(".bat", PerceivedType.Text);
         AddPerceived(".btproj", PerceivedType.Text);
         AddPerceived(".c", PerceivedType.Text);
+        AddPerceived(".cake", PerceivedType.Text);
         AddPerceived(".cbl", PerceivedType.Text);
         AddPerceived(".class", PerceivedType.Text);
+        AddPerceived(".cmake", PerceivedType.Text);
         AddPerceived(".cmd", PerceivedType.Text);
         AddPerceived(".cob", PerceivedType.Text);
         AddPerceived(".cpp", PerceivedType.Text);
@@ -144,6 +161,7 @@ public sealed class Perceived(string extension)
         AddPerceived(".reg", PerceivedType.Text);
         AddPerceived(".resx", PerceivedType.Text);
         AddPerceived(".rs", PerceivedType.Text);
+        AddPerceived(".rsp", PerceivedType.Text);
         AddPerceived(".rtf", PerceivedType.Text);
         AddPerceived(".rzt", PerceivedType.Text);
         AddPerceived(".schemaview", PerceivedType.Text);
@@ -201,13 +219,56 @@ public sealed class Perceived(string extension)
         AddPerceived(".7z", PerceivedType.Compressed);
     }
 
-    public static Perceived AddPerceived(string extension, PerceivedType type)
+    static Perceived()
+    {
+        if (IOUtilities.PathIsFile(Settings.PerceivedTypesFilePath))
+        {
+            try
+            {
+                using var stream = new FileStream(Settings.PerceivedTypesFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var file = JsonSerializer.Deserialize<PerceivedTypesFile>(stream, _options);
+                if (file != null)
+                {
+                    if (file.ReadHardCodedValuesBefore)
+                    {
+                        ReadHardcodedPerceivedTypes();
+                    }
+
+                    foreach (var item in file.PerceivedTypes)
+                    {
+                        if (item.Extension == null)
+                            continue;
+
+                        AddPerceived(item.Extension, item.PerceivedType, PerceivedTypeSource.DoxieSettings);
+                    }
+
+                    if (file.ReadHardCodedValuesAfter)
+                    {
+                        ReadHardcodedPerceivedTypes();
+                    }
+                    return;
+                }
+            }
+            catch
+            {
+                // continue;
+            }
+        }
+
+        ReadHardcodedPerceivedTypes();
+
+        //var file = new PerceivedTypesFile { PerceivedTypes = [.. _perceivedTypes.Values.Select(p => new PerceivedTypeItem { PerceivedType = p.PerceivedType, Extension = p.Extension })] };
+        //using var stream = new FileStream(Settings.PerceivedTypesFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+        //JsonSerializer.Serialize(stream, file, _options);
+    }
+
+    public static Perceived AddPerceived(string extension, PerceivedType type, PerceivedTypeSource source = PerceivedTypeSource.HardCoded)
     {
         ArgumentNullException.ThrowIfNull(extension);
         var perceived = new Perceived(extension)
         {
             PerceivedType = type,
-            PerceivedTypeSource = PerceivedTypeSource.HardCoded
+            PerceivedTypeSource = source
         };
         _perceivedTypes[perceived.Extension] = perceived;
         return perceived;

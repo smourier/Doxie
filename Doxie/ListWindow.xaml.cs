@@ -2,18 +2,26 @@
 
 public partial class ListWindow : Window
 {
-    private readonly ObservableCollection<string> _strings = new();
+    private readonly ObservableCollection<ListItem> _items = [];
+    private bool _sortedByNameAsc;
+    private bool _sortedByDescriptionAsc;
 
-    public ListWindow(IEnumerable<string> enumerable)
+    public ListWindow(IEnumerable<ListItem> enumerable)
     {
+        ArgumentNullException.ThrowIfNull(enumerable);
         InitializeComponent();
-        _strings.AddRange(enumerable);
-        list.ItemsSource = _strings;
+        var sortedItems = enumerable.OrderBy(i => i.Name);
+        _sortedByNameAsc = true;
+        _items.AddRange(sortedItems);
+        list.ItemsSource = _items;
+        DataContext = this;
     }
 
-    public bool ShowButton { get; set; }
-    public string? ButtonText { get; set; }
-    public Func<string, bool>? IncludeAction { get; set; }
+    public string? SortByDescriptionButtonText { get; set; }
+    public string? SortByNameButtonText { get; set; }
+    public bool IsSortByDescriptionButtonVisible => !string.IsNullOrEmpty(SortByDescriptionButtonText);
+    public bool IsSortByNameButtonVisible => !string.IsNullOrEmpty(SortByNameButtonText);
+    public bool IsSortPanelEnabled => IsSortByDescriptionButtonVisible || IsSortByNameButtonVisible;
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
@@ -25,15 +33,31 @@ public partial class ListWindow : Window
         base.OnKeyDown(e);
     }
 
-    private void Add_Click(object sender, RoutedEventArgs e)
+    private void Action_Click(object sender, RoutedEventArgs e)
     {
-        var ext = sender.GetDataContext<string>();
-        if (ext != null && IncludeAction != null)
+        var item = sender.GetDataContext<ListItem>();
+        if (item != null && item.Action != null)
         {
-            if (IncludeAction(ext))
+            if (item.Action())
             {
-                _strings.Remove(ext);
+                _items.Remove(item);
             }
         }
+    }
+
+    private void SortByName_Click(object sender, RoutedEventArgs e)
+    {
+        var sortedItems = (_sortedByNameAsc ? _items.OrderByDescending(i => i.Name) : _items.OrderBy(i => i.Name)).ToArray();
+        _items.Clear();
+        _items.AddRange(sortedItems);
+        _sortedByNameAsc = !_sortedByNameAsc;
+    }
+
+    private void SortByDescription_Click(object sender, RoutedEventArgs e)
+    {
+        var sortedItems = (_sortedByDescriptionAsc ? _items.OrderByDescending(i => i.Description) : _items.OrderBy(i => i.Description)).ToArray();
+        _items.Clear();
+        _items.AddRange(sortedItems);
+        _sortedByDescriptionAsc = !_sortedByDescriptionAsc;
     }
 }

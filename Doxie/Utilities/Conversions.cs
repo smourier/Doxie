@@ -1049,8 +1049,11 @@ public static class Conversions
     }
 #pragma warning restore IL2067 // Target parameter argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The parameter of method does not have matching annotations.
 
-    public static ulong EnumToUInt64(object value)
+    public static ulong EnumToUInt64(object? value)
     {
+        if (value == null)
+            return 0;
+
         var typeCode = Convert.GetTypeCode(value);
         return typeCode switch
         {

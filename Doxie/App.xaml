@@ -13,9 +13,9 @@
         <utilities:CountToBooleanConverter x:Key="CountToBooleanConverter" />
         <utilities:StringJoinConverter x:Key="StringJoinConverter" />
         <utilities:CountConverter x:Key="CountConverter" />
+        <utilities:EnumDisplayConverter x:Key="EnumDisplayConverter" />
         <SolidColorBrush x:Key="ListViewItemPillFillBrush" Color="#784424" />
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#784424" />
-        <!--<SolidColorBrush x:Key="ControlElevationBorderBrush" Color="White" />-->
         <CornerRadius x:Key="ControlCornerRadius">5</CornerRadius>
         <SolidColorBrush x:Key="ButtonBackground" Color="#ebab34" />
         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#ebbd34" />
@@ -66,9 +66,7 @@
                                 BorderBrush="#FFFFFFFF"
                                 BorderThickness="{TemplateBinding Border.BorderThickness}"
                                 CornerRadius="4,4,4,4"
-                                Opacity="0.2"
-                                >
-                            </Border>
+                                Opacity="0.2" />
                             <Border
                                 Name="Header"
                                 Grid.Row="0"

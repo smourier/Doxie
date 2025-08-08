@@ -138,6 +138,13 @@
                     Click="ScanAllDirs_Click">
                     Scan all directories
                 </Button>
+
+                <Button
+                    x:Name="queryIndex"
+                    Margin="5"
+                    Click="QueryIndex_Click">
+                    Query index
+                </Button>
             </StackPanel>
             <GroupBox Grid.Row="2" Header="Included file extensions">
                 <Grid>
@@ -297,6 +304,7 @@
             <DataGrid
                 x:Name="batches"
                 Grid.Row="1"
+                Margin="0,5,10,0"
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 CanUserDeleteRows="False"
@@ -373,6 +381,15 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Binding="{Binding Options, Converter={StaticResource EnumDisplayConverter}}" Header="Details">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                <Setter Property="ToolTip" Value="{Binding Options, Converter={StaticResource EnumDisplayConverter}}" />
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>

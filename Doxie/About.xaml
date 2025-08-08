@@ -31,13 +31,5 @@
             Click="OK_Click"
             Content="OK"
             IsDefault="True" />
-        <Button
-            Name="Details"
-            Grid.Row="1"
-            Margin="0,0,215,10"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Bottom"
-            Click="Details_Click"
-            Content="System Info" />
     </Grid>
 </Window>

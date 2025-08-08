@@ -258,7 +258,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         {
             if (request.CancellationTokenSource?.IsCancellationRequested == true)
             {
-                batch.Options |= IndexDirectoryBatchOptions.WasCancelled;
+                batch.Options |= IndexDirectoryBatchOptions.IndexingWasCancelled;
                 break;
             }
 

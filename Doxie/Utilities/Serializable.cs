@@ -95,7 +95,7 @@ public abstract class Serializable<T> : INotifyPropertyChanged where T : new()
         }
     }
 
-    private static readonly JsonSerializerOptions _options = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, };
+    private static readonly JsonSerializerOptions _options = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     public virtual string Serialize() => JsonSerializer.Serialize((object)this, _options); // note: you *must* cast as object
     public virtual void Serialize(Stream stream)
     {
