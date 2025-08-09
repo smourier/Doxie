@@ -30,14 +30,33 @@
         <TextBlock
             Margin="5"
             VerticalAlignment="Center"
-            Text="Query:" />
-        <TextBox
-            x:Name="query"
-            Grid.Column="1"
-            Margin="5"
-            VerticalAlignment="Center"
-            Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" />
-
+            Text="Query:"
+            ToolTip="Search for Query Parser Syntax - Apache Lucene for advanced queries" />
+        <Grid Grid.Column="1">
+            <TextBox
+                x:Name="query"
+                Margin="5"
+                VerticalAlignment="Center"
+                Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock
+                Margin="20,0,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Foreground="DarkGray"
+                IsHitTestVisible="False"
+                Text="Enter Search Term Here. Search Internet for Apache Lucene Query Parser Syntax for advanced queries.">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Text, ElementName=query}" Value="">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
         <Grid
             x:Name="files"
             Grid.Row="1"
@@ -131,15 +150,28 @@
             Height="30"
             Padding="0"
             Background="#202020">
+            <StatusBarItem
+                HorizontalAlignment="Stretch"
+                Background="Red"
+                Visibility="{Binding QueryHasError, Converter={StaticResource BoolToVis}}">
+                <TextBlock
+                    Foreground="White"
+                    Text="{Binding ErrorMessage}"
+                    ToolTip="{Binding ErrorMessage}" />
+            </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Stretch">
                 <TextBlock Foreground="White" Text="{Binding Item.Path}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem HorizontalAlignment="Stretch">
+                <TextBlock Foreground="White" Text="{Binding DetectedEncoding.WebName, StringFormat={}\'{0}\' detected encoding}" />
             </StatusBarItem>
             <Separator Visibility="{Binding IsLinesCountVisible, Converter={StaticResource BoolToVis}}" />
             <StatusBarItem HorizontalAlignment="Right" Visibility="{Binding IsLinesCountVisible, Converter={StaticResource BoolToVis}}">
                 <TextBlock Foreground="White" Text="{Binding LinesCount, StringFormat={}{0} lines}" />
             </StatusBarItem>
-            <Separator />
-            <StatusBarItem HorizontalAlignment="Right">
+            <Separator Visibility="{Binding IsDetectedLanguageVisible, Converter={StaticResource BoolToVis}}" />
+            <StatusBarItem HorizontalAlignment="Right" Visibility="{Binding IsDetectedLanguageVisible, Converter={StaticResource BoolToVis}}">
                 <TextBlock Foreground="White" Text="{Binding ModelLanguageName, StringFormat={}\'{0}\' detected language}" />
             </StatusBarItem>
         </StatusBar>

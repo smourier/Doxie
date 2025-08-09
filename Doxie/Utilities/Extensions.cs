@@ -371,4 +371,28 @@ public static class Extensions
 
         return default;
     }
+
+    public static void WrapDispatcher(this Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null || dispatcher.CheckAccess())
+        {
+            action();
+            return;
+        }
+        dispatcher.Invoke(action);
+    }
+
+    public static T WrapDispatcher<T>(this Func<T> func)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null || dispatcher.CheckAccess())
+            return func();
+
+        return dispatcher.Invoke(func);
+    }
 }

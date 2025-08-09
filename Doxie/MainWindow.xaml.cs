@@ -33,7 +33,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public void OpenIndex(string filePath)
     {
         ArgumentNullException.ThrowIfNull(filePath);
-        var index = Model.Index.OpenWrite(filePath);
+
+        Model.Index index;
+        try
+        {
+            index = Model.Index.OpenWrite(filePath);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Failed to open index file: {ex.GetInterestingExceptionMessage()}", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+
+        }
         Settings.Current.AddRecentFile(filePath);
         OnPropertyChanged(nameof(RecentFiles));
         Index?.Dispose();
@@ -57,9 +68,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Key == Key.T &&
-            Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) &&
-            Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        if (e.Key == Key.F8)
         {
             var lastRecent = Settings.Current.RecentFiles.FirstOrDefault()?.FilePath;
             if (lastRecent != null)
@@ -211,6 +220,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void AddDirectory_Click(object sender, RoutedEventArgs e)
     {
+        if (Index == null)
+            return;
+
         var fld = new OpenFolderDialog
         {
             Title = "Select a directory to add to index",
@@ -218,12 +230,45 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (fld.ShowDialog(this) == true)
         {
-            Index?.EnsureDirectory(fld.FolderName);
+            Index.EnsureDirectory(fld.FolderName);
+        }
+    }
+
+    private void AddMultipleDirectories_Click(object sender, RoutedEventArgs e)
+    {
+        if (Index == null)
+            return;
+
+        var fld = new OpenFolderDialog
+        {
+            Title = "Select a parent directory to pick sub directories from",
+            Multiselect = false,
+        };
+        if (fld.ShowDialog(this) == true)
+        {
+            var dlg = new AddMultipleDirectories(fld.FolderName)
+            {
+                Owner = this,
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                var paths = dlg.SelectedPaths.ToArray();
+                if (paths.Length > 0)
+                {
+                    foreach (var path in paths)
+                    {
+                        Index.EnsureDirectory(path);
+                    }
+                }
+            }
         }
     }
 
     private void AddIncludedExt_Click(object sender, RoutedEventArgs e)
     {
+        if (Index == null)
+            return;
+
         var dlg = new AddExtensionWindow()
         {
             Owner = this,
@@ -351,8 +396,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void QueryIndex_Click(object sender, RoutedEventArgs e)
     {
-        if (Index == null)
+        if (Index == null || Index.Directories.Count == 0)
+        {
+            MessageBox.Show(this, "There's nothing to query yet, you could add a directory and scan it.", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
+        }
 
         var queryWindow = new QueryWindow(Index.FilePath)
         {

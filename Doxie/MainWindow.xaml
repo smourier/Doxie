@@ -126,10 +126,28 @@
                 Margin="5,0,0,0"
                 Orientation="Horizontal">
                 <Button
+                    x:Name="queryIndex"
+                    Margin="5"
+                    Click="QueryIndex_Click"
+                    Content="Query index...">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackground" Color="#7EE629" />
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#85FA25" />
+                    </Button.Resources>
+                </Button>
+
+                <Button
                     x:Name="addDirectory"
                     Margin="5"
                     Click="AddDirectory_Click">
                     Add directory to index...
+                </Button>
+
+                <Button
+                    x:Name="addMultipleDirectories"
+                    Margin="5"
+                    Click="AddMultipleDirectories_Click">
+                    Add multiple directories to index...
                 </Button>
 
                 <Button
@@ -139,12 +157,6 @@
                     Scan all directories
                 </Button>
 
-                <Button
-                    x:Name="queryIndex"
-                    Margin="5"
-                    Click="QueryIndex_Click">
-                    Query index
-                </Button>
             </StackPanel>
             <GroupBox Grid.Row="2" Header="Included file extensions">
                 <Grid>

@@ -28,12 +28,15 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock VerticalAlignment="Center" Text="Name" />
+        <TextBlock
+            Margin="10"
+            VerticalAlignment="Center"
+            Text="Extension" />
         <TextBox
             x:Name="extension"
             Grid.ColumnSpan="3"
             Height="30"
-            Margin="50,0,15,0"
+            Margin="80,0,15,0"
             MaxLines="1"
             Text="{Binding Extension, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
             TextChanged="Extension_TextChanged" />

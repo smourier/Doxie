@@ -1,11 +1,19 @@
 ﻿namespace Doxie.Model;
 
-public class IndexDirectory(Index index, string path) : INotifyPropertyChanged, IEquatable<IndexDirectory>
+public class IndexDirectory : INotifyPropertyChanged, IEquatable<IndexDirectory>
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public Index Index { get; } = index ?? throw new ArgumentNullException(nameof(index));
-    public string Path { get; } = path ?? throw new ArgumentNullException(nameof(path));
+    internal IndexDirectory(Index index, int id, string path)
+    {
+        Index = index;
+        Id = id;
+        Path = path;
+    }
+
+    public int Id { get; }
+    public Index Index { get; }
+    public string Path { get; }
     public ObservableCollection<IndexDirectoryBatch> Batches { get; } = [];
     public IEnumerable<IndexDirectoryBatch> OrderedBatches => Batches.OrderByDescending(b => b.StartTime);
 

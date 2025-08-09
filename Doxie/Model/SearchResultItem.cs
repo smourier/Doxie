@@ -1,4 +1,6 @@
-﻿namespace Doxie.Model;
+﻿using Lucene.Net.Documents;
+
+namespace Doxie.Model;
 
 public class SearchResultItem
 {
@@ -6,6 +8,8 @@ public class SearchResultItem
 
     public int Index { get; set; }
     public float Score { get; set; }
+    public int DocumentId { get; set; }
+    public Document Document { get; set; } = null!;
 
     public IReadOnlyDictionary<string, object?> Fields => _fields;
 

@@ -51,10 +51,22 @@ public class LinesStream : IDisposable
     public string? GetText(int lineIndex)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(lineIndex);
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(lineIndex, Lines.Count);
-        return GetText(Lines[lineIndex]);
+        var lines = Lines;
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(lineIndex, lines.Count);
+        return GetText(lines[lineIndex]);
     }
 
+    public IEnumerable<Line> GetLines(int linesIndexStart, int count)
+    {
+        var lines = Lines;
+        while (count > 0 && linesIndexStart < lines.Count)
+        {
+            yield return lines[linesIndexStart++];
+            count--;
+        }
+    }
+
+    public IEnumerable<string> GetTexts(int linesIndexStart, int count) => GetTexts(GetLines(linesIndexStart, count));
     public IEnumerable<string> GetTexts(IEnumerable<Line> lines)
     {
         ArgumentNullException.ThrowIfNull(lines);

@@ -211,7 +211,7 @@ public abstract class Serializable<T> : INotifyPropertyChanged where T : new()
         if (maxDuration.HasValue)
         {
             var dir = Path.GetDirectoryName(bakPath)!;
-            foreach (var file in System.IO.Directory.GetFiles(dir))
+            foreach (var file in Directory.GetFiles(dir))
             {
                 if (string.Compare(file, bakPath, StringComparison.OrdinalIgnoreCase) == 0)
                     continue;

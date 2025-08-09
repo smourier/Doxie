@@ -1,4 +1,5 @@
 ﻿using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers.Classic;
 using Lucene.Net.Search;
@@ -12,11 +13,11 @@ public class Index : INotifyPropertyChanged, IDisposable
 {
     public const string FileExtension = ".doxidx";
     public const string DefaultFieldName = "corpus";
-    public const string FieldRelPath = "relPath";
-    public const string FieldDir = "dir";
+    public const string FieldRelPath = "path";
+    public const string FieldDirectoryId = "did";
     public const string FieldExt = "ext";
-    public const string FieldBatchId = "batchId";
-    public const string FieldLinesCount = "linesCount";
+    public const string FieldBatchId = "bid";
+    public const string FieldLinesCount = "lines";
 
     // database settings
     private const string _version = "version";
@@ -123,59 +124,61 @@ public class Index : INotifyPropertyChanged, IDisposable
     protected virtual void OnPropertyChanged(object sender, PropertyChangedEventArgs e) => PropertyChanged?.Invoke(sender, e);
     public void OnPropertyChanged([CallerMemberName] string? propertyName = null) => OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 
-    protected virtual void UpdateDirectories()
+    protected virtual void UpdateDirectories() => Extensions.WrapDispatcher(() =>
     {
         var directories = _sqlDirectory.Database.LoadAll<Directory>();
         Directories.UpdateWith(directories.Select(d => d.ToIndexDirectory(this, d)) ?? [], (existing, p) => existing.Update(p));
-    }
+    });
 
-    protected virtual void UpdateSettings()
+    protected virtual void UpdateSettings() => Extensions.WrapDispatcher(() =>
     {
         IncludedFileExtensions.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_includedFileExtensions), [_dbSeparator]));
         ExcludedDirectoryNames.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_excludedDirectoryNames), [_dbSeparator]));
-    }
+    });
 
     protected virtual void SaveIncludedFileExtensions() => _sqlDirectory.SaveSetting(_includedFileExtensions, string.Join(_dbSeparator, IncludedFileExtensions));
     protected virtual void SaveExcludedDirectoryNames() => _sqlDirectory.SaveSetting(_excludedDirectoryNames, string.Join(_dbSeparator, ExcludedDirectoryNames));
     protected virtual void SaveDirectory(IndexDirectory dir)
     {
         ArgumentNullException.ThrowIfNull(dir);
-        if (dir.Path == null)
+        if (dir.Path == null || dir.Id <= 0)
             throw new InvalidOperationException();
 
-        _sqlDirectory.Save(new Directory(_sqlDirectory.Database) { Path = dir.Path });
+        _sqlDirectory.Save(new Directory(_sqlDirectory.Database) { Path = dir.Path, Id = dir.Id });
     }
 
-    public virtual bool EnsureDirectory(string path)
+    public virtual IndexDirectory EnsureDirectory(string path) => Extensions.WrapDispatcher(() =>
     {
         ArgumentNullException.ThrowIfNull(path);
-        var dir = new IndexDirectory(this, path);
-        if (Directories.Any(n => n.Path.EqualsIgnoreCase(path)))
+        var dir = Directories.FirstOrDefault(n => n.Path.EqualsIgnoreCase(path));
+        if (dir == null)
         {
+            var max = _sqlDirectory.Database.ExecuteScalar($"SELECT MAX({nameof(Directory.Id)}) FROM {nameof(Directory)}", 0);
+            dir = new IndexDirectory(this, max + 1, path);
             SaveDirectory(dir);
-            return false;
+            Extensions.WrapDispatcher(() =>
+            {
+                Directories.Add(dir);
+                OnPropertyChanged(nameof(Directories));
+            });
         }
+        return dir;
+    });
 
-        Directories.Add(dir);
-        SaveDirectory(dir);
-        OnPropertyChanged(nameof(Directories));
-        return true;
-    }
-
-    public virtual bool RemoveDirectory(string path)
+    public virtual bool RemoveDirectory(string path) => Extensions.WrapDispatcher(() =>
     {
         ArgumentNullException.ThrowIfNull(path);
-        var dir = new IndexDirectory(this, path);
-        if (!Directories.Any(n => n.Path.EqualsIgnoreCase(path)))
+        var dir = Directories.FirstOrDefault(n => n.Path.EqualsIgnoreCase(path));
+        if (dir == null)
             return false;
 
         Directories.Remove(dir);
         DeleteDirectory(path);
         OnPropertyChanged(nameof(Directories));
         return true;
-    }
+    });
 
-    public virtual bool RemoveIncludedFileExtension(string ext)
+    public virtual bool RemoveIncludedFileExtension(string ext) => Extensions.WrapDispatcher(() =>
     {
         ArgumentNullException.ThrowIfNull(ext);
         if (!ext.StartsWith('.'))
@@ -190,9 +193,9 @@ public class Index : INotifyPropertyChanged, IDisposable
         SaveIncludedFileExtensions();
         OnPropertyChanged(nameof(IncludedFileExtensions));
         return true;
-    }
+    });
 
-    public virtual bool EnsureIncludedFileExtension(string ext)
+    public virtual bool EnsureIncludedFileExtension(string ext) => Extensions.WrapDispatcher(() =>
     {
         ArgumentNullException.ThrowIfNull(ext);
         if (!ext.StartsWith('.'))
@@ -210,9 +213,9 @@ public class Index : INotifyPropertyChanged, IDisposable
         SaveIncludedFileExtensions();
         OnPropertyChanged(nameof(IncludedFileExtensions));
         return true;
-    }
+    });
 
-    public virtual bool RemoveExcludedDirectoryName(string name)
+    public virtual bool RemoveExcludedDirectoryName(string name) => Extensions.WrapDispatcher(() =>
     {
         ArgumentNullException.ThrowIfNull(name);
         if (!ExcludedDirectoryNames.Any(n => n.EqualsIgnoreCase(name)))
@@ -222,9 +225,9 @@ public class Index : INotifyPropertyChanged, IDisposable
         SaveExcludedDirectoryNames();
         OnPropertyChanged(nameof(ExcludedDirectoryNames));
         return true;
-    }
+    });
 
-    public virtual bool EnsureExcludedDirectoryName(string name)
+    public virtual bool EnsureExcludedDirectoryName(string name) => Extensions.WrapDispatcher(() =>
     {
         ArgumentNullException.ThrowIfNull(name);
         if (ExcludedDirectoryNames.Any(n => n.EqualsIgnoreCase(name)))
@@ -237,14 +240,14 @@ public class Index : INotifyPropertyChanged, IDisposable
         SaveExcludedDirectoryNames();
         OnPropertyChanged(nameof(ExcludedDirectoryNames));
         return true;
-    }
+    });
 
     protected virtual void DoScan(IndexScanRequest request, IndexScanResult result)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
 
-        EnsureDirectory(request.InputDirectory.Path);
+        var dir = EnsureDirectory(request.InputDirectory.Path);
         var batch = new IndexDirectoryBatch(request.InputDirectory, Guid.NewGuid())
         {
             StartTimeUtc = DateTime.UtcNow
@@ -276,16 +279,6 @@ public class Index : INotifyPropertyChanged, IDisposable
             }
 
             var ext = Path.GetExtension(entry).ToLowerInvariant();
-            //if (Perceived.GetPerceivedType(ext).PerceivedType != PerceivedType.Text)
-            //{
-            //    if (!batch.NonIndexedFileExtensions.Contains(ext))
-            //    {
-            //        batch.NonIndexedFileExtensions.Add(ext);
-            //    }
-
-            //    batch.NumberOfSkippedFiles++;
-            //    continue;
-            //}
 
             batch.EndTimeUtc = DateTime.UtcNow;
             var e = new IndexingEventArgs(batch, entry);
@@ -309,10 +302,16 @@ public class Index : INotifyPropertyChanged, IDisposable
 
             var idx = new IndexDocument(DefaultFieldName);
             idx.AddField(DefaultFieldName, pathForIndex + " " + string.Join(Environment.NewLine, lines));
-            idx.AddField(FieldExt, ext, true);
+
+            var fext = ext;
+            if (fext.StartsWith('.'))
+            {
+                fext = fext[1..]; // remove leading dot
+            }
+            idx.AddField(FieldExt, fext, true);
             idx.AddField(FieldLinesCount, lines.Length, true);
             idx.AddField(FieldBatchId, batch.Id.ToString("N"), true);
-            idx.AddField(FieldDir, request.InputDirectory.Path, true);
+            idx.AddField(FieldDirectoryId, dir.Id, true);
             idx.AddField(FieldRelPath, relPath, true);
 
             var doc = idx.FinishAndGetDocument();
@@ -366,7 +365,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         _sqlDirectory.Save(batchData);
     }
 
-    public virtual bool DeleteDirectory(string path)
+    public virtual bool DeleteDirectory(string path) => Extensions.WrapDispatcher(() =>
     {
         ArgumentNullException.ThrowIfNull(path);
         _sqlDirectory.Database.BeginTransaction();
@@ -386,7 +385,7 @@ public class Index : INotifyPropertyChanged, IDisposable
             _sqlDirectory.Database.Rollback();
             throw;
         }
-    }
+    });
 
     public static Index OpenRead(string filePath)
     {
@@ -399,7 +398,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            throw new Exception($"File '{filePath}' doesn't appear to be a valid Doxie index file.", ex);
+            throw new Exception($"File '{filePath}' doesn't appear to be a valid Doxie V{AssemblyUtilities.GetInformationalVersion()} index file.", ex);
         }
     }
 
@@ -414,7 +413,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            throw new Exception($"File '{filePath}' doesn't appear to be a valid Doxie index file.", ex);
+            throw new Exception($"File '{filePath}' doesn't appear to be a valid Doxie V{AssemblyUtilities.GetInformationalVersion()} index file.", ex);
         }
     }
 
@@ -463,14 +462,23 @@ public class Index : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(originalText);
 
+        var f = DefaultFieldName;
         var analyzer = new StandardAnalyzer(LuceneVersion.LUCENE_48);
-
-        var parser = new QueryParser(LuceneVersion.LUCENE_48, DefaultFieldName, analyzer) { AllowLeadingWildcard = true, };
+        var parser = new QueryParser(LuceneVersion.LUCENE_48, f, analyzer) { AllowLeadingWildcard = true, };
         var qry = parser.Parse(query);
-        var scorer = new QueryScorer(qry, DefaultFieldName);
-        var highlighter = new Highlighter(scorer);
-        var tokenStream = analyzer.GetTokenStream(DefaultFieldName, originalText);
-        var fragments = highlighter.GetBestTextFragments(tokenStream, originalText, false, 0x7FFFFEFF);
+        var scorer = new QueryScorer(qry, f);
+
+        var highlighter = new Highlighter(scorer)
+        {
+            TextFragmenter = new SimpleSpanFragmenter(scorer)
+        };
+
+        var tokenStream = analyzer.GetTokenStream(f, originalText);
+
+        var sw = Stopwatch.StartNew();
+        var fragments = highlighter.GetBestTextFragments(tokenStream, originalText, false, 100);
+        EventProvider.Default.WriteMessage("sw: " + sw.Elapsed + " count:" + fragments.Length);
+        sw.Restart();
 
         var list = new List<IndexFragment>();
         foreach (var fragment in fragments)
@@ -479,13 +487,16 @@ public class Index : INotifyPropertyChanged, IDisposable
             var endOffset = (int)_fragmentTextEndPos.Value.GetValue(fragment)!;
             list.Add(new IndexFragment(startOffset, endOffset));
         }
+
         return list;
     }
 
-    public SearchResult<SearchResultItem> Search(string query, int maximumDocuments = int.MaxValue)
-        => Search<SearchResultItem>(query, maximumDocuments);
+    private static SearchResultItem CreateItemFunc(Index index, int docIndex, ScoreDoc scoreDoc, Document doc) => new() { Index = docIndex, Score = scoreDoc.Score, DocumentId = scoreDoc.Doc, Document = doc };
 
-    public virtual SearchResult<T> Search<T>(string query, int maximumDocuments = int.MaxValue) where T : SearchResultItem, new()
+    public SearchResult<SearchResultItem> Search(string query, int maximumDocuments = int.MaxValue)
+        => Search<SearchResultItem>(query, CreateItemFunc, maximumDocuments);
+
+    public virtual SearchResult<T> Search<T>(string query, Func<Index, int, ScoreDoc, Document, T?> createItem, int maximumDocuments = int.MaxValue) where T : SearchResultItem
     {
         ArgumentNullException.ThrowIfNull(query);
         if (_searcher == null)
@@ -507,34 +518,37 @@ public class Index : INotifyPropertyChanged, IDisposable
             if (doc.Fields.Count == 0)
                 continue;
 
-            var item = new T { Index = list.Count + 1, Score = topDocs.ScoreDocs[i].Score };
+            var item = createItem(this, list.Count + 1, topDocs.ScoreDocs[i], doc);
+            if (item == null)
+                continue;
+
             list.Add(item);
 
             foreach (var fld in doc)
             {
                 switch (fld.NumericType)
                 {
-                    case Lucene.Net.Documents.NumericFieldType.BYTE:
+                    case NumericFieldType.BYTE:
                         item.AddField(fld.Name, fld.GetByteValue());
                         break;
 
-                    case Lucene.Net.Documents.NumericFieldType.INT16:
+                    case NumericFieldType.INT16:
                         item.AddField(fld.Name, fld.GetInt16Value());
                         break;
 
-                    case Lucene.Net.Documents.NumericFieldType.INT32:
+                    case NumericFieldType.INT32:
                         item.AddField(fld.Name, fld.GetInt32Value());
                         break;
 
-                    case Lucene.Net.Documents.NumericFieldType.INT64:
+                    case NumericFieldType.INT64:
                         item.AddField(fld.Name, fld.GetInt64Value());
                         break;
 
-                    case Lucene.Net.Documents.NumericFieldType.SINGLE:
+                    case NumericFieldType.SINGLE:
                         item.AddField(fld.Name, fld.GetSingleValue());
                         break;
 
-                    case Lucene.Net.Documents.NumericFieldType.DOUBLE:
+                    case NumericFieldType.DOUBLE:
                         item.AddField(fld.Name, fld.GetDoubleValue());
                         break;
 
@@ -569,6 +583,7 @@ public class Index : INotifyPropertyChanged, IDisposable
     internal sealed class Directory(SQLiteDatabase db) : ISQLiteObject
     {
         [SQLiteColumn(IsPrimaryKey = true)]
+        public int Id { get; set; }
         public string? Path { get; set; }
         public DateTime CreationTimUtc { get; set; } = DateTime.UtcNow;
         public IEnumerable<DirectoryBatch> Batches => ((ISQLiteObject)this).Database?.LoadByForeignKey<DirectoryBatch>(this).WhereNotNull() ?? [];
@@ -581,12 +596,12 @@ public class Index : INotifyPropertyChanged, IDisposable
             if (directory.Path == null)
                 throw new InvalidOperationException();
 
-            var id = new IndexDirectory(index, directory.Path);
+            var dir = new IndexDirectory(index, directory.Id, directory.Path);
             foreach (var batch in index._sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", directory.Path))
             {
-                id.Batches.Add(batch.ToIndexDirectoryBatch(id));
+                dir.Batches.Add(batch.ToIndexDirectoryBatch(dir));
             }
-            return id;
+            return dir;
         }
     }
 

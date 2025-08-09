@@ -176,7 +176,7 @@ public static class IOUtilities
 
         try
         {
-            System.IO.Directory.CreateDirectory(dir);
+            Directory.CreateDirectory(dir);
             return true;
         }
         catch

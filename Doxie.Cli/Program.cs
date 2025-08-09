@@ -27,7 +27,7 @@ internal class Program
         };
 
         //var request = new IndexCreationRequest(@"E:\github\microsoft\VCSamples")
-        var request = new IndexScanRequest(new IndexDirectory(index, @"E:\smo\GitHub\Axxon"))
+        var request = new IndexScanRequest(index.EnsureDirectory(@"E:\smo\GitHub\Axxon"))
         {
             CancellationTokenSource = cts
         };
@@ -60,7 +60,7 @@ internal class Program
             }
         }
 
-        var queryResult = query.Search<IndexSearchResultItem>("polling");
+        var queryResult = query.Search("polling", IndexSearchResultItem.CreateItem);
         foreach (var doc in queryResult.Items)
         {
             Console.WriteLine($"Found: {doc}");

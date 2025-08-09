@@ -29,7 +29,7 @@ public partial class EditorControlObject
         }
         catch (Exception ex)
         {
-            Debug.WriteLine(ex);
+            EventProvider.Default.WriteMessage("Error: " + ex);
             throw;
         }
     }
@@ -52,7 +52,7 @@ public partial class EditorControlObject
         }
         catch (Exception ex)
         {
-            Debug.WriteLine(ex);
+            EventProvider.Default.WriteMessage("Error: " + ex);
             throw;
         }
     }

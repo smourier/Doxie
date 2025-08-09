@@ -28,7 +28,10 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock VerticalAlignment="Center" Text="Name" />
+        <TextBlock
+            Margin="10"
+            VerticalAlignment="Center"
+            Text="Name" />
         <TextBox
             x:Name="directoryName"
             Grid.ColumnSpan="3"

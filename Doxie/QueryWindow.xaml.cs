@@ -10,10 +10,13 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private readonly Task _webView2Initialized;
     private readonly EditorControlObject _eco = new();
     private LinesStream? _stream;
-    private int _currentStreamLine = -1;
+    private int _currentStreamLineIndex = 0;
     private int _linesCount;
     private bool _isLinesCountVisible;
+    private bool _isDetectedLanguageVisible;
     private string? _modelLanguageName;
+    private Encoding? _detectedEncoding;
+    private string? _errorMessage;
 
     public QueryWindow(string indexFilePath)
     {
@@ -41,6 +44,40 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
             _modelLanguageName = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsDetectedLanguageVisible));
+        }
+    }
+
+    public bool QueryHasError => !string.IsNullOrWhiteSpace(ErrorMessage);
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        set
+        {
+            if (_errorMessage == value)
+                return;
+
+            _errorMessage = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(QueryHasError));
+        }
+    }
+
+    public Encoding? DetectedEncoding
+    {
+        get => _detectedEncoding;
+        set
+        {
+            if (value == null)
+            {
+                if (_detectedEncoding == null)
+                    return;
+            }
+            else if (_detectedEncoding != null && _detectedEncoding.WebName == value.WebName)
+                return;
+
+            _detectedEncoding = value;
+            OnPropertyChanged();
         }
     }
 
@@ -66,6 +103,19 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                 return;
 
             _isLinesCountVisible = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsDetectedLanguageVisible
+    {
+        get => _isDetectedLanguageVisible;
+        set
+        {
+            if (_isDetectedLanguageVisible == value)
+                return;
+
+            _isDetectedLanguageVisible = value;
             OnPropertyChanged();
         }
     }
@@ -116,10 +166,21 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
             if (!string.IsNullOrWhiteSpace(_query))
             {
-                var result = Index.Search<IndexSearchResultItem>(_query);
-                TotalHits = result.TotalHits;
-                var files = result.Items.OrderBy(i => i.RelativePath);
-                Results.AddRange(files);
+                try
+                {
+                    var result = Index.Search(_query, IndexSearchResultItem.CreateItem);
+                    TotalHits = result.TotalHits;
+                    var files = result.Items.OrderBy(i => i.RelativePath);
+                    Results.AddRange(files);
+                    ErrorMessage = null;
+                }
+                catch (Exception ex)
+                {
+                    EventProvider.Default.WriteMessage("Error searching index: " + ex.Message);
+                    ErrorMessage = (ex.GetInterestingExceptionMessage() ?? ex.Message).Replace(Environment.NewLine, " ");
+                    TotalHits = 0;
+                    Results.Clear();
+                }
             }
         }
     }
@@ -176,9 +237,11 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         try
         {
             var encoding = EncodingDetector.DetectEncoding(item.Path, Settings.Current.EncodingDetectorMode);
+            DetectedEncoding = encoding;
 
             _stream?.Dispose();
             IsLinesCountVisible = false;
+            _currentStreamLineIndex = 0;
             _stream = new LinesStream(item.Path, encoding);
             _stream.Loaded += (s, e) =>
             {
@@ -192,14 +255,15 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             await MoveEditorTo(1, 1);
             await SetLanguage(item);
 
-            Index.Highlight(Query, _stream.Text);
+            var text = File.ReadAllText(item.Path, encoding);
+            var list = Index.Highlight(Query, text);
 
             await HighlightRanges([new MonacoRange(2, 4, 3, 6)]);
             return true;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine(ex);
+            EventProvider.Default.WriteMessage("Error:" + ex);
             _stream?.Dispose();
             _stream = null;
             return false;
@@ -208,21 +272,25 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
     private void EditorControlOnLoad(object? sender, EditorControlLoadEventArgs e)
     {
-        if (_stream == null)
+        if (_stream == null || _stream.Lines.Count == 0)
         {
             e.DocumentText = null;
             return;
         }
 
-        _currentStreamLine += 1;
-        if (_stream.Lines.Count <= _currentStreamLine)
+        // send lines in chunks to monaco editor
+        const int chunkSize = 1000;
+
+        var linesCount = Math.Min(chunkSize, _stream.Lines.Count - _currentStreamLineIndex);
+        if (linesCount <= 0)
         {
             e.DocumentText = null;
-            _currentStreamLine = -1;
             return;
         }
 
-        e.DocumentText = _stream.GetText(_currentStreamLine) + Environment.NewLine;
+        var texts = string.Join(Environment.NewLine, _stream.GetTexts(_currentStreamLineIndex, linesCount));
+        _currentStreamLineIndex += linesCount;
+        e.DocumentText = texts;
     }
 
     private Task<string> EnableMinimap(bool enabled) => webView.ExecuteScriptAsync("editor.updateOptions({minimap:{enabled:" + enabled.ToString().ToLowerInvariant() + "}})");
