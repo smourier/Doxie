@@ -21,14 +21,8 @@
 /// Utility class to record Positions Spans
 /// @lucene.internal
 /// </summary>
-public class PositionSpan
+public class PositionSpan(int start, int end)
 {
-    public int Start { get; set; }
-    public int End { get; set; }
-
-    public PositionSpan(int start, int end)
-    {
-        Start = start;
-        End = end;
-    }
+    public int Start { get; set; } = start;
+    public int End { get; set; } = end;
 }

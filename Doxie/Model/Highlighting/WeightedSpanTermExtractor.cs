@@ -33,24 +33,20 @@ namespace Doxie.Model.Highlighting;
 /// </summary>
 public class WeightedSpanTermExtractor
 {
-    private string fieldName;
-    private TokenStream tokenStream;
-    private readonly string defaultField;
-    private bool expandMultiTermQuery;
-    private bool cachedTokenStream;
-    private bool wrapToCaching = true;
-    private int maxDocCharsToAnalyze;
-    private AtomicReader internalReader = null;
+    private string? _fieldName;
+    private TokenStream? _tokenStream;
+    private readonly string? _defaultField;
+    private bool _expandMultiTermQuery;
+    private bool _cachedTokenStream;
+    private bool _wrapToCaching = true;
+    private int _maxDocCharsToAnalyze;
+    private AtomicReader? _internalReader;
 
-    public WeightedSpanTermExtractor()
-    {
-    }
-
-    public WeightedSpanTermExtractor(string defaultField)
+    public WeightedSpanTermExtractor(string? defaultField = null)
     {
         if (defaultField != null)
         {
-            this.defaultField = defaultField.Intern();
+            _defaultField = defaultField.Intern();
         }
     }
 
@@ -66,7 +62,7 @@ public class WeightedSpanTermExtractor
         {
             IList<BooleanClause> queryClauses = booleanQuery.Clauses;
 
-            for (int i = 0; i < queryClauses.Count; i++)
+            for (var i = 0; i < queryClauses.Count; i++)
             {
                 if (!queryClauses[i].IsProhibited)
                 {
@@ -76,24 +72,25 @@ public class WeightedSpanTermExtractor
         }
         else if (query is PhraseQuery phraseQuery)
         {
-            Term[] phraseQueryTerms = phraseQuery.GetTerms();
-            SpanQuery[] clauses = new SpanQuery[phraseQueryTerms.Length];
-            for (int i = 0; i < phraseQueryTerms.Length; i++)
+            var phraseQueryTerms = phraseQuery.GetTerms();
+            var clauses = new SpanQuery[phraseQueryTerms.Length];
+            for (var i = 0; i < phraseQueryTerms.Length; i++)
             {
                 clauses[i] = new SpanTermQuery(phraseQueryTerms[i]);
             }
-            int slop = phraseQuery.Slop;
-            int[] positions = phraseQuery.GetPositions();
+
+            var slop = phraseQuery.Slop;
+            var positions = phraseQuery.GetPositions();
             // add largest position increment to slop
             if (positions.Length > 0)
             {
-                int lastPos = positions[0];
-                int largestInc = 0;
-                int sz = positions.Length;
-                for (int i = 1; i < sz; i++)
+                var lastPos = positions[0];
+                var largestInc = 0;
+                var sz = positions.Length;
+                for (var i = 1; i < sz; i++)
                 {
-                    int pos = positions[i];
-                    int inc = pos - lastPos;
+                    var pos = positions[i];
+                    var inc = pos - lastPos;
                     if (inc > largestInc)
                     {
                         largestInc = inc;
@@ -106,10 +103,12 @@ public class WeightedSpanTermExtractor
                 }
             }
 
-            bool inorder = slop == 0;
+            var inorder = slop == 0;
 
-            SpanNearQuery sp = new SpanNearQuery(clauses, slop, inorder);
-            sp.Boost = query.Boost;
+            var sp = new SpanNearQuery(clauses, slop, inorder)
+            {
+                Boost = query.Boost
+            };
             ExtractWeightedSpanTerms(terms, sp);
         }
         else if (query is TermQuery)
@@ -126,7 +125,7 @@ public class WeightedSpanTermExtractor
         }
         else if (query is ConstantScoreQuery constantScoreQuery)
         {
-            Query q = constantScoreQuery.Query;
+            var q = constantScoreQuery.Query;
             if (q != null)
             {
                 Extract(q, terms);
@@ -147,13 +146,12 @@ public class WeightedSpanTermExtractor
         }
         else if (query is MultiPhraseQuery mpq)
         {
-            IList<Term[]> termArrays = mpq.GetTermArrays();
-            int[] positions = mpq.GetPositions();
+            var termArrays = mpq.GetTermArrays();
+            var positions = mpq.GetPositions();
             if (positions.Length > 0)
             {
-
-                int maxPosition = positions[positions.Length - 1];
-                for (int i = 0; i < positions.Length - 1; ++i)
+                var maxPosition = positions[^1];
+                for (var i = 0; i < positions.Length - 1; ++i)
                 {
                     if (positions[i] > maxPosition)
                     {
@@ -162,11 +160,11 @@ public class WeightedSpanTermExtractor
                 }
 
                 var disjunctLists = new JCG.List<SpanQuery>[maxPosition + 1];
-                int distinctPositions = 0;
+                var distinctPositions = 0;
 
-                for (int i = 0; i < termArrays.Count; ++i)
+                for (var i = 0; i < termArrays.Count; ++i)
                 {
-                    Term[] termArray = termArrays[i];
+                    var termArray = termArrays[i];
                     JCG.List<SpanQuery> disjuncts = disjunctLists[positions[i]];
                     if (disjuncts is null)
                     {
@@ -179,14 +177,14 @@ public class WeightedSpanTermExtractor
                     }
                 }
 
-                int positionGaps = 0;
-                int position = 0;
-                SpanQuery[] clauses = new SpanQuery[distinctPositions];
+                var positionGaps = 0;
+                var position = 0;
+                var clauses = new SpanQuery[distinctPositions];
                 foreach (var disjuncts in disjunctLists)
                 {
                     if (disjuncts != null)
                     {
-                        clauses[position++] = new SpanOrQuery(disjuncts.ToArray());
+                        clauses[position++] = new SpanOrQuery([.. disjuncts]);
                     }
                     else
                     {
@@ -194,29 +192,33 @@ public class WeightedSpanTermExtractor
                     }
                 }
 
-                int slop = mpq.Slop;
-                bool inorder = slop == 0;
+                var slop = mpq.Slop;
+                var inorder = slop == 0;
 
-                SpanNearQuery sp = new SpanNearQuery(clauses, slop + positionGaps, inorder);
-                sp.Boost = query.Boost;
+                var sp = new SpanNearQuery(clauses, slop + positionGaps, inorder)
+                {
+                    Boost = query.Boost
+                };
                 ExtractWeightedSpanTerms(terms, sp);
             }
         }
         else
         {
-            Query origQuery = query;
+            var origQuery = query;
             if (query is MultiTermQuery)
             {
-                if (!expandMultiTermQuery)
+                if (!_expandMultiTermQuery)
                 {
                     return;
                 }
-                MultiTermQuery copy = (MultiTermQuery)query.Clone();
+
+                var copy = (MultiTermQuery)query.Clone();
                 copy.MultiTermRewriteMethod = MultiTermQuery.SCORING_BOOLEAN_QUERY_REWRITE;
                 origQuery = copy;
             }
-            IndexReader reader = GetLeafContext().Reader;
-            Query rewritten = origQuery.Rewrite(reader);
+
+            var reader = GetLeafContext().Reader;
+            var rewritten = origQuery.Rewrite(reader);
             if (rewritten != origQuery)
             {
                 // only rewrite once and then flatten again - the rewritten query could have a speacial treatment
@@ -241,35 +243,35 @@ public class WeightedSpanTermExtractor
     /// <exception cref="IOException">If there is a low-level I/O error</exception>
     protected virtual void ExtractWeightedSpanTerms(IDictionary<string, WeightedSpanTerm> terms, SpanQuery spanQuery)
     {
-        ISet<string> fieldNames;
+        JCG.HashSet<string> fieldNames;
 
-        if (fieldName is null)
+        if (_fieldName is null)
         {
-            fieldNames = new JCG.HashSet<string>();
+            fieldNames = [];
             CollectSpanQueryFields(spanQuery, fieldNames);
         }
         else
         {
-            fieldNames = new JCG.HashSet<string>
-            {
-                fieldName
-            };
+            fieldNames =
+            [
+                _fieldName
+            ];
         }
         // To support the use of the default field name
-        if (defaultField != null)
+        if (_defaultField != null)
         {
-            fieldNames.Add(defaultField);
+            fieldNames.Add(_defaultField);
         }
 
-        IDictionary<string, SpanQuery> queries = new JCG.Dictionary<string, SpanQuery>();
+        var queries = new JCG.Dictionary<string, SpanQuery>();
 
         var nonWeightedTerms = new JCG.HashSet<Term>();
-        bool mustRewriteQuery = MustRewriteQuery(spanQuery);
+        var mustRewriteQuery = MustRewriteQuery(spanQuery);
         if (mustRewriteQuery)
         {
-            foreach (string field in fieldNames)
+            foreach (var field in fieldNames)
             {
-                SpanQuery rewrittenQuery = (SpanQuery)spanQuery.Rewrite(GetLeafContext().Reader);
+                var rewrittenQuery = (SpanQuery)spanQuery.Rewrite(GetLeafContext().Reader);
                 queries[field] = rewrittenQuery;
                 rewrittenQuery.ExtractTerms(nonWeightedTerms);
             }
@@ -279,23 +281,25 @@ public class WeightedSpanTermExtractor
             spanQuery.ExtractTerms(nonWeightedTerms);
         }
 
-        IList<PositionSpan> spanPositions = new JCG.List<PositionSpan>();
+        var spanPositions = new JCG.List<PositionSpan>();
 
-        foreach (string field in fieldNames)
+        foreach (var field in fieldNames)
         {
-            SpanQuery q;
-            q = mustRewriteQuery ? queries[field] : spanQuery;
+            var q = mustRewriteQuery ? queries[field] : spanQuery;
+            if (q is null)
+                continue;
 
-            AtomicReaderContext context = GetLeafContext();
+            var context = GetLeafContext();
             var termContexts = new JCG.Dictionary<Term, TermContext>();
-            ISet<Term> extractedTerms = new JCG.SortedSet<Term>();
+            var extractedTerms = new JCG.SortedSet<Term>();
             q.ExtractTerms(extractedTerms);
-            foreach (Term term in extractedTerms)
+            foreach (var term in extractedTerms)
             {
                 termContexts[term] = TermContext.Build(context, term);
             }
-            IBits acceptDocs = context.AtomicReader.LiveDocs;
-            Spans spans = q.GetSpans(context, acceptDocs, termContexts);
+
+            var acceptDocs = context.AtomicReader.LiveDocs;
+            var spans = q.GetSpans(context, acceptDocs, termContexts);
 
             // collect span positions
             while (spans.MoveNext())
@@ -310,11 +314,11 @@ public class WeightedSpanTermExtractor
             return;
         }
 
-        foreach (Term queryTerm in nonWeightedTerms)
+        foreach (var queryTerm in nonWeightedTerms)
         {
             if (FieldNameComparer(queryTerm.Field))
             {
-                if (!terms.TryGetValue(queryTerm.Text, out WeightedSpanTerm weightedSpanTerm) || weightedSpanTerm is null)
+                if (!terms.TryGetValue(queryTerm.Text, out var weightedSpanTerm) || weightedSpanTerm is null)
                 {
                     weightedSpanTerm = new WeightedSpanTerm(spanQuery.Boost, queryTerm.Text);
                     weightedSpanTerm.AddPositionSpans(spanPositions);
@@ -344,45 +348,46 @@ public class WeightedSpanTermExtractor
         var nonWeightedTerms = new JCG.HashSet<Term>();
         query.ExtractTerms(nonWeightedTerms);
 
-        foreach (Term queryTerm in nonWeightedTerms)
+        foreach (var queryTerm in nonWeightedTerms)
         {
-
             if (FieldNameComparer(queryTerm.Field))
             {
-                WeightedSpanTerm weightedSpanTerm = new WeightedSpanTerm(query.Boost, queryTerm.Text);
+                var weightedSpanTerm = new WeightedSpanTerm(query.Boost, queryTerm.Text);
                 terms[queryTerm.Text] = weightedSpanTerm;
             }
         }
     }
 
     /// <summary>
-    /// Necessary to implement matches for queries against <see cref="defaultField"/>
+    /// Necessary to implement matches for queries against <see cref="_defaultField"/>
     /// </summary>
-    protected virtual bool FieldNameComparer(string fieldNameToCheck)
-    {
-        bool rv = fieldName is null || fieldName.Equals(fieldNameToCheck, StringComparison.Ordinal)
-                  || fieldNameToCheck.Equals(defaultField, StringComparison.Ordinal);
-        return rv;
-    }
+    protected virtual bool FieldNameComparer(string fieldNameToCheck) =>
+        _fieldName is null ||
+        _fieldName.Equals(fieldNameToCheck, StringComparison.Ordinal) ||
+        fieldNameToCheck.Equals(_defaultField, StringComparison.Ordinal);
 
     protected virtual AtomicReaderContext GetLeafContext()
     {
-        if (internalReader is null)
+        if (_tokenStream is null)
+            throw new InvalidOperationException("TokenStream must be set before calling GetLeafContext");
+
+        if (_internalReader is null)
         {
-            if (wrapToCaching && !(tokenStream is CachingTokenFilter))
+            if (_wrapToCaching && _tokenStream is not CachingTokenFilter)
             {
-                tokenStream = new CachingTokenFilter(new OffsetLimitTokenFilter(tokenStream, maxDocCharsToAnalyze));
-                cachedTokenStream = true;
+                _tokenStream = new CachingTokenFilter(new OffsetLimitTokenFilter(_tokenStream, _maxDocCharsToAnalyze));
+                _cachedTokenStream = true;
             }
-            MemoryIndex indexer = new MemoryIndex(true);
-            indexer.AddField(DelegatingAtomicReader.FIELD_NAME, tokenStream);
-            tokenStream.Reset();
-            IndexSearcher searcher = indexer.CreateSearcher();
+
+            var indexer = new MemoryIndex(true);
+            indexer.AddField(DelegatingAtomicReader.FieldName, _tokenStream);
+            _tokenStream.Reset();
+            var searcher = indexer.CreateSearcher();
             // MEM index has only atomic ctx
             var reader = ((AtomicReaderContext)searcher.TopReaderContext).AtomicReader;
-            internalReader = new DelegatingAtomicReader(reader);
+            _internalReader = new DelegatingAtomicReader(reader);
         }
-        return internalReader.AtomicContext;
+        return _internalReader.AtomicContext;
     }
 
     /// <summary>
@@ -392,70 +397,32 @@ public class WeightedSpanTermExtractor
     /// </summary>
     internal sealed class DelegatingAtomicReader : FilterAtomicReader
     {
-        public static string FIELD_NAME = "shadowed_field";
+        public static string FieldName = "shadowed_field";
 
         internal DelegatingAtomicReader(AtomicReader reader) : base(reader) { }
 
         public override FieldInfos FieldInfos => throw new NotSupportedException();
-
         public override Fields Fields => new DelegatingFilterFields(base.Fields);
 
-        private class DelegatingFilterFields : FilterFields
+        private class DelegatingFilterFields(Fields fields) : FilterFields(fields)
         {
-            public DelegatingFilterFields(Fields fields) : base(fields) { }
-
-            public override Terms GetTerms(string field)
-            {
-                return base.GetTerms(FIELD_NAME);
-            }
+            public override Terms GetTerms(string field) => base.GetTerms(FieldName);
 
             public override IEnumerator<string> GetEnumerator()
             {
-                var list = new JCG.List<string> { FIELD_NAME };
+                var list = new JCG.List<string> { FieldName };
                 return list.GetEnumerator();
             }
 
             public override int Count => 1;
         }
 
-        public override NumericDocValues GetNumericDocValues(string field)
-        {
-            return base.GetNumericDocValues(FIELD_NAME);
-        }
-
-        public override BinaryDocValues GetBinaryDocValues(string field)
-        {
-            return base.GetBinaryDocValues(FIELD_NAME);
-        }
-
-        public override SortedDocValues GetSortedDocValues(string field)
-        {
-            return base.GetSortedDocValues(FIELD_NAME);
-        }
-
-        public override NumericDocValues GetNormValues(string field)
-        {
-            return base.GetNormValues(FIELD_NAME);
-        }
-
-        public override IBits GetDocsWithField(string field)
-        {
-            return base.GetDocsWithField(FIELD_NAME);
-        }
+        public override NumericDocValues GetNumericDocValues(string field) => base.GetNumericDocValues(FieldName);
+        public override BinaryDocValues GetBinaryDocValues(string field) => base.GetBinaryDocValues(FieldName);
+        public override SortedDocValues GetSortedDocValues(string field) => base.GetSortedDocValues(FieldName);
+        public override NumericDocValues GetNormValues(string field) => base.GetNormValues(FieldName);
+        public override IBits GetDocsWithField(string field) => base.GetDocsWithField(FieldName);
     }
-
-    /// <summary>
-    /// Creates an <see cref="T:IDictionary{string,WeightedSpanTerm}"/> from the given <see cref="Query"/> and <see cref="Analysis.TokenStream"/>.
-    /// </summary>
-    /// <param name="query"><see cref="Query"/> that caused hit</param>
-    /// <param name="tokenStream"><see cref="Analysis.TokenStream"/> of text to be highlighted</param>
-    /// <returns>Map containing <see cref="WeightedSpanTerm"/>s</returns>
-    /// <exception cref="IOException">If there is a low-level I/O error</exception>
-    public virtual IDictionary<string, WeightedSpanTerm> GetWeightedSpanTerms(Query query, TokenStream tokenStream)
-    {
-        return GetWeightedSpanTerms(query, tokenStream, null);
-    }
-
 
     /// <summary>
     /// Creates an <see cref="T:IDictionary{string,WeightedSpanTerm}"/> from the given <see cref="Query"/> and <see cref="Analysis.TokenStream"/>.
@@ -465,27 +432,26 @@ public class WeightedSpanTermExtractor
     /// <param name="fieldName">restricts Term's used based on field name</param>
     /// <returns>Map containing <see cref="WeightedSpanTerm"/>s</returns>
     /// <exception cref="IOException">If there is a low-level I/O error</exception>
-    public virtual IDictionary<string, WeightedSpanTerm> GetWeightedSpanTerms(Query query, TokenStream tokenStream,
-                                                                      string fieldName)
+    public virtual IDictionary<string, WeightedSpanTerm> GetWeightedSpanTerms(Query query, TokenStream tokenStream, string? fieldName = null)
     {
         if (fieldName != null)
         {
-            this.fieldName = fieldName.Intern();
+            _fieldName = fieldName.Intern();
         }
         else
         {
-            this.fieldName = null;
+            _fieldName = null;
         }
 
-        IDictionary<string, WeightedSpanTerm> terms = new PositionCheckingMap<string>();
-        this.tokenStream = tokenStream;
+        var terms = new PositionCheckingMap<string>();
+        _tokenStream = tokenStream;
         try
         {
             Extract(query, terms);
         }
         finally
         {
-            IOUtils.Dispose(internalReader);
+            IOUtils.Dispose(_internalReader);
         }
 
         return terms;
@@ -501,17 +467,16 @@ public class WeightedSpanTermExtractor
     /// <param name="reader">to use for scoring</param>
     /// <returns>Map of <see cref="WeightedSpanTerm"/>s with quasi tf/idf scores</returns>
     /// <exception cref="IOException">If there is a low-level I/O error</exception>
-    public virtual IDictionary<string, WeightedSpanTerm> GetWeightedSpanTermsWithScores(
-        Query query, TokenStream tokenStream, string fieldName, IndexReader reader)
+    public virtual IDictionary<string, WeightedSpanTerm> GetWeightedSpanTermsWithScores(Query query, TokenStream tokenStream, string? fieldName, IndexReader reader)
     {
-        this.fieldName = fieldName?.Intern();
+        _fieldName = fieldName?.Intern();
 
-        this.tokenStream = tokenStream;
+        _tokenStream = tokenStream;
 
-        IDictionary<string, WeightedSpanTerm> terms = new PositionCheckingMap<string>();
+        var terms = new PositionCheckingMap<string>();
         Extract(query, terms);
 
-        int totalNumDocs = reader.MaxDoc;
+        var totalNumDocs = reader.MaxDoc;
         var weightedTerms = terms.Keys;
 
         try
@@ -519,15 +484,15 @@ public class WeightedSpanTermExtractor
             foreach (var wt in weightedTerms)
             {
                 terms.TryGetValue(wt, out WeightedSpanTerm weightedSpanTerm);
-                int docFreq = reader.DocFreq(new Term(fieldName, weightedSpanTerm.Term));
+                var docFreq = reader.DocFreq(new Term(fieldName, weightedSpanTerm.Term));
                 // IDF algorithm taken from DefaultSimilarity class
-                float idf = (float)(Math.Log(totalNumDocs / (double)(docFreq + 1)) + 1.0);
+                var idf = (float)(Math.Log(totalNumDocs / (double)(docFreq + 1)) + 1.0);
                 weightedSpanTerm.Weight *= idf;
             }
         }
         finally
         {
-            IOUtils.Dispose(internalReader);
+            IOUtils.Dispose(_internalReader);
         }
 
         return terms;
@@ -569,19 +534,16 @@ public class WeightedSpanTermExtractor
 
     protected virtual bool MustRewriteQuery(SpanQuery spanQuery)
     {
-        if (!expandMultiTermQuery)
-        {
+        if (!_expandMultiTermQuery)
             return false; // Will throw NotImplementedException in case of a SpanRegexQuery.
-        }
-        else if (spanQuery is FieldMaskingSpanQuery fieldMaskingSpanQuery)
-        {
+
+        if (spanQuery is FieldMaskingSpanQuery fieldMaskingSpanQuery)
             return MustRewriteQuery(fieldMaskingSpanQuery.MaskedQuery);
-        }
-        else if (spanQuery is SpanFirstQuery spanFirstQuery)
-        {
+
+        if (spanQuery is SpanFirstQuery spanFirstQuery)
             return MustRewriteQuery(spanFirstQuery.Match);
-        }
-        else if (spanQuery is SpanNearQuery spanNearQuery)
+
+        if (spanQuery is SpanNearQuery spanNearQuery)
         {
             foreach (SpanQuery clause in spanNearQuery.GetClauses())
             {
@@ -592,11 +554,11 @@ public class WeightedSpanTermExtractor
             }
             return false;
         }
-        else if (spanQuery is SpanNotQuery spanNotQuery)
-        {
+
+        if (spanQuery is SpanNotQuery spanNotQuery)
             return MustRewriteQuery(spanNotQuery.Include) || MustRewriteQuery(spanNotQuery.Exclude);
-        }
-        else if (spanQuery is SpanOrQuery spanOrQuery)
+
+        if (spanQuery is SpanOrQuery spanOrQuery)
         {
             foreach (SpanQuery clause in spanOrQuery.GetClauses())
             {
@@ -607,14 +569,11 @@ public class WeightedSpanTermExtractor
             }
             return false;
         }
-        else if (spanQuery is SpanTermQuery)
-        {
+
+        if (spanQuery is SpanTermQuery)
             return false;
-        }
-        else
-        {
-            return true;
-        }
+
+        return true;
     }
 
 
@@ -625,23 +584,23 @@ public class WeightedSpanTermExtractor
     /// <typeparam name="K"></typeparam>
     // LUCENENET NOTE: Unfortunately, members of Dictionary{TKey, TValue} are not virtual,
     // so we need to implement IDictionary{TKey, TValue} instead.
-    protected class PositionCheckingMap<K> : IDictionary<K, WeightedSpanTerm>
+    protected class PositionCheckingMap<K> : IDictionary<K, WeightedSpanTerm> where K : notnull
     {
-        private readonly IDictionary<K, WeightedSpanTerm> wrapped = new Dictionary<K, WeightedSpanTerm>();
+        private readonly IDictionary<K, WeightedSpanTerm> _wrapped = new Dictionary<K, WeightedSpanTerm>();
 
         public WeightedSpanTerm this[K key]
         {
-            get => wrapped[key];
+            get => _wrapped[key];
 
             set
             {
-                wrapped.TryGetValue(key, out WeightedSpanTerm prev);
-                wrapped[key] = value;
+                _wrapped.TryGetValue(key, out var prev);
+                _wrapped[key] = value;
 
                 if (prev is null) return;
 
-                WeightedSpanTerm prevTerm = prev;
-                WeightedSpanTerm newTerm = value;
+                var prevTerm = prev;
+                var newTerm = value;
                 if (!prevTerm.IsPositionSensitive)
                 {
                     newTerm.IsPositionSensitive = false;
@@ -649,79 +608,43 @@ public class WeightedSpanTermExtractor
             }
         }
 
-        public int Count => wrapped.Count;
-
-        public bool IsReadOnly => false;
-
-        public ICollection<K> Keys => wrapped.Keys;
-
-        public ICollection<WeightedSpanTerm> Values => wrapped.Values;
-
-        public void Add(KeyValuePair<K, WeightedSpanTerm> item)
-        {
-            this[item.Key] = item.Value;
-        }
-
-        public void Add(K key, WeightedSpanTerm value)
-        {
-            this[key] = value;
-        }
-
-        public void Clear()
-        {
-            wrapped.Clear();
-        }
-
-        public bool Contains(KeyValuePair<K, WeightedSpanTerm> item)
-        {
-            return wrapped.Contains(item);
-        }
-
-        public bool ContainsKey(K key)
-        {
-            return wrapped.ContainsKey(key);
-        }
-
-        public void CopyTo(KeyValuePair<K, WeightedSpanTerm>[] array, int arrayIndex)
-        {
-            wrapped.CopyTo(array, arrayIndex);
-        }
-
-        public IEnumerator<KeyValuePair<K, WeightedSpanTerm>> GetEnumerator()
-        {
-            return wrapped.GetEnumerator();
-        }
-
-        public bool Remove(KeyValuePair<K, WeightedSpanTerm> item)
-        {
-            return wrapped.Remove(item);
-        }
-
-        public bool Remove(K key)
-        {
-            return wrapped.Remove(key);
-        }
-
         public bool TryGetValue(K key, out WeightedSpanTerm value)
         {
-            return wrapped.TryGetValue(key, out value);
+            if (!_wrapped.TryGetValue(key, out var v))
+            {
+                value = new WeightedSpanTerm(0, string.Empty);
+                return false;
+            }
+
+            value = v;
+            return true;
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        public int Count => _wrapped.Count;
+        public bool IsReadOnly => false;
+        public ICollection<K> Keys => _wrapped.Keys;
+        public ICollection<WeightedSpanTerm> Values => _wrapped.Values;
+        public void Add(KeyValuePair<K, WeightedSpanTerm> item) => this[item.Key] = item.Value;
+        public void Add(K key, WeightedSpanTerm value) => this[key] = value;
+        public void Clear() => _wrapped.Clear();
+        public bool Contains(KeyValuePair<K, WeightedSpanTerm> item) => _wrapped.Contains(item);
+        public bool ContainsKey(K key) => _wrapped.ContainsKey(key);
+        public void CopyTo(KeyValuePair<K, WeightedSpanTerm>[] array, int arrayIndex) => _wrapped.CopyTo(array, arrayIndex);
+        public IEnumerator<KeyValuePair<K, WeightedSpanTerm>> GetEnumerator() => _wrapped.GetEnumerator();
+        public bool Remove(KeyValuePair<K, WeightedSpanTerm> item) => _wrapped.Remove(item);
+        public bool Remove(K key) => _wrapped.Remove(key);
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     public virtual bool ExpandMultiTermQuery
     {
-        set => expandMultiTermQuery = value;
-        get => expandMultiTermQuery;
+        set => _expandMultiTermQuery = value;
+        get => _expandMultiTermQuery;
     }
 
-    public virtual bool IsCachedTokenStream => cachedTokenStream;
+    public virtual bool IsCachedTokenStream => _cachedTokenStream;
 
-    public virtual TokenStream TokenStream => tokenStream;
+    public virtual TokenStream? TokenStream => _tokenStream;
 
     /// <summary>
     /// By default, <see cref="Analysis.TokenStream"/>s that are not of the type
@@ -729,13 +652,7 @@ public class WeightedSpanTermExtractor
     /// <see cref="Analysis.TokenStream"/> impl and you don't want it to be wrapped, set this to
     /// false.
     /// </summary>
-    public virtual void SetWrapIfNotCachingTokenFilter(bool wrap)
-    {
-        wrapToCaching = wrap;
-    }
+    public virtual void SetWrapIfNotCachingTokenFilter(bool wrap) => _wrapToCaching = wrap;
 
-    protected internal void SetMaxDocCharsToAnalyze(int maxDocCharsToAnalyze)
-    {
-        this.maxDocCharsToAnalyze = maxDocCharsToAnalyze;
-    }
+    protected internal void SetMaxDocCharsToAnalyze(int maxDocCharsToAnalyze) => _maxDocCharsToAnalyze = maxDocCharsToAnalyze;
 }

@@ -28,26 +28,19 @@ namespace Doxie.Model.Highlighting;
 /// text, using configurable <see cref="IFragmenter"/>, <see cref="Scorer"/>, <see cref="IFormatter"/>,
 /// <see cref="IEncoder"/> and tokenizers.
 /// </summary>
-public class Highlighter
+public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmentScorer)
 {
     public static readonly int DEFAULT_MAX_CHARS_TO_ANALYZE = 50 * 1024;
 
     private int _maxDocCharsToAnalyze = DEFAULT_MAX_CHARS_TO_ANALYZE;
-    private readonly IFormatter _formatter; // LUCENENET: marked readonly
-    private IEncoder _encoder;
+    private readonly IFormatter _formatter = formatter; // LUCENENET: marked readonly
+    private IEncoder _encoder = encoder;
     private IFragmenter _textFragmenter = new SimpleFragmenter();
-    private IScorer _fragmentScorer = null;
+    private IScorer _fragmentScorer = fragmentScorer;
 
     public Highlighter(IFormatter formatter, IScorer fragmentScorer)
         : this(formatter, new DefaultEncoder(), fragmentScorer)
     {
-    }
-
-    public Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmentScorer)
-    {
-        _formatter = formatter;
-        _encoder = encoder;
-        _fragmentScorer = fragmentScorer;
     }
 
     /// <summary>
@@ -59,7 +52,7 @@ public class Highlighter
     /// <param name="text">text to highlight terms in</param>
     /// <returns>highlighted text fragment or null if no terms found</returns>
     /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
-    public string GetBestFragment(Analyzer analyzer, string fieldName, string text)
+    public string? GetBestFragment(Analyzer analyzer, string fieldName, string text)
     {
         TokenStream tokenStream = analyzer.GetTokenStream(fieldName, text);
         return GetBestFragment(tokenStream, text);
@@ -81,7 +74,7 @@ public class Highlighter
     /// <param name="text">text to highlight terms in</param>
     /// <returns>highlighted text fragment or null if no terms found</returns>
     /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
-    public string GetBestFragment(TokenStream tokenStream, string text)
+    public string? GetBestFragment(TokenStream tokenStream, string text)
     {
         string[] results = GetBestFragments(tokenStream, text, 1);
         if (results.Length > 0)
@@ -131,14 +124,14 @@ public class Highlighter
 
         //Get text
         var fragTexts = new JCG.List<string>();
-        for (int i = 0; i < frag.Length; i++)
+        for (var i = 0; i < frag.Length; i++)
         {
             if (frag[i] != null && frag[i].Score > 0)
             {
                 fragTexts.Add(frag[i].ToString());
             }
         }
-        return fragTexts.ToArray();
+        return [.. fragTexts];
     }
 
     /// <summary>
@@ -205,11 +198,11 @@ public class Highlighter
                     // markup the cached token group info
                     startOffset = tokenGroup.MatchStartOffset;
                     endOffset = tokenGroup.MatchEndOffset;
-                    tokenText = text.Substring(startOffset, endOffset - startOffset);
+                    tokenText = text[startOffset..endOffset];
                     string markedUpText = _formatter.HighlightTerm(_encoder.EncodeText(tokenText), tokenGroup);
                     //store any whitespace etc from between this and last group
                     if (startOffset > lastEndOffset)
-                        newText.Append(_encoder.EncodeText(text.Substring(lastEndOffset, startOffset - lastEndOffset)));
+                        newText.Append(_encoder.EncodeText(text[lastEndOffset..startOffset]));
                     newText.Append(markedUpText);
                     lastEndOffset = Math.Max(endOffset, lastEndOffset);
                     tokenGroup.Clear();
@@ -240,11 +233,11 @@ public class Highlighter
                 //flush the accumulated text (same code as in above loop)
                 startOffset = tokenGroup.MatchStartOffset;
                 endOffset = tokenGroup.MatchEndOffset;
-                tokenText = text.Substring(startOffset, endOffset - startOffset);
+                tokenText = text[startOffset..endOffset];
                 var markedUpText = _formatter.HighlightTerm(_encoder.EncodeText(tokenText), tokenGroup);
                 //store any whitespace etc from between this and last group
                 if (startOffset > lastEndOffset)
-                    newText.Append(_encoder.EncodeText(text.Substring(lastEndOffset, startOffset - lastEndOffset)));
+                    newText.Append(_encoder.EncodeText(text[lastEndOffset..startOffset]));
                 newText.Append(markedUpText);
                 lastEndOffset = Math.Max(lastEndOffset, endOffset);
             }
@@ -259,7 +252,7 @@ public class Highlighter
                 )
             {
                 //append it to the last fragment
-                newText.Append(_encoder.EncodeText(text.Substring(lastEndOffset)));
+                newText.Append(_encoder.EncodeText(text[lastEndOffset..]));
             }
 
             currentFrag.TextEndPos = newText.Length;
@@ -290,7 +283,7 @@ public class Highlighter
 
             //return the most relevant fragments
             var frag = new TextFragment[fragQueue.Count];
-            for (int i = frag.Length - 1; i >= 0; i--)
+            for (var i = frag.Length - 1; i >= 0; i--)
             {
                 frag[i] = fragQueue.Pop();
             }
@@ -299,8 +292,8 @@ public class Highlighter
             if (mergeContiguousFragments)
             {
                 MergeContiguousFragments(frag);
-                JCG.List<TextFragment> fragTexts = new JCG.List<TextFragment>();
-                for (int i = 0; i < frag.Length; i++)
+                var fragTexts = new JCG.List<TextFragment>();
+                for (var i = 0; i < frag.Length; i++)
                 {
                     if (frag[i] != null && frag[i].Score > 0)
                     {
@@ -323,7 +316,7 @@ public class Highlighter
                     tokenStream.End();
                     tokenStream.Dispose();
                 }
-                catch (Exception e)
+                catch
                 {
                 }
             }
@@ -336,7 +329,7 @@ public class Highlighter
     /// This will leave a "null" in the array entry for the lesser scored fragment. 
     /// </summary>
     /// <param name="frag">An array of document fragments in descending score</param>
-    private static void MergeContiguousFragments(TextFragment[] frag) // LUCENENET: CA1822: Mark members as static
+    private static void MergeContiguousFragments(TextFragment?[] frag) // LUCENENET: CA1822: Mark members as static
     {
         bool mergingStillBeingDone;
         if (frag.Length > 1)
@@ -344,38 +337,41 @@ public class Highlighter
             {
                 mergingStillBeingDone = false; //initialise loop control flag
                 //for each fragment, scan other frags looking for contiguous blocks
-                for (int i = 0; i < frag.Length; i++)
+                for (var i = 0; i < frag.Length; i++)
                 {
                     if (frag[i] is null)
                     {
                         continue;
                     }
                     //merge any contiguous blocks 
-                    for (int x = 0; x < frag.Length; x++)
+                    for (var x = 0; x < frag.Length; x++)
                     {
-                        if (frag[x] is null)
+                        var fragX = frag[x];
+                        if (fragX is null)
                         {
                             continue;
                         }
-                        if (frag[i] is null)
+
+                        var fragI = frag[i];
+                        if (fragI is null)
                         {
                             break;
                         }
-                        TextFragment frag1 = null;
-                        TextFragment frag2 = null;
+                        TextFragment? frag1 = null;
+                        TextFragment? frag2 = null;
                         int frag1Num = 0;
                         int frag2Num = 0;
                         int bestScoringFragNum;
                         int worstScoringFragNum;
                         //if blocks are contiguous....
-                        if (frag[i].Follows(frag[x]))
+                        if (fragI.Follows(fragX))
                         {
                             frag1 = frag[x];
                             frag1Num = x;
                             frag2 = frag[i];
                             frag2Num = i;
                         }
-                        else if (frag[x].Follows(frag[i]))
+                        else if (fragX.Follows(fragI))
                         {
                             frag1 = frag[i];
                             frag1Num = i;
@@ -383,7 +379,7 @@ public class Highlighter
                             frag2Num = x;
                         }
                         //merging required..
-                        if (frag1 != null)
+                        if (frag1 != null && frag2 != null)
                         {
                             if (frag1.Score > frag2.Score)
                             {
@@ -425,8 +421,8 @@ public class Highlighter
         string separator)
     {
         string[] sections = GetBestFragments(tokenStream, text, maxNumFragments);
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < sections.Length; i++)
+        var result = new StringBuilder();
+        for (var i = 0; i < sections.Length; i++)
         {
             if (i > 0)
             {
@@ -460,17 +456,15 @@ public class Highlighter
         get => _encoder;
         set => _encoder = value;
     }
-}
 
-internal class FragmentQueue : PriorityQueue<TextFragment>
-{
-    public FragmentQueue(int size) : base(size) { }
-
-    protected override bool LessThan(TextFragment fragA, TextFragment fragB)
+    private sealed class FragmentQueue(int size) : PriorityQueue<TextFragment>(size)
     {
-        if (fragA.Score == fragB.Score)
-            return fragA.FragNum > fragB.FragNum;
-        else
-            return fragA.Score < fragB.Score;
+        protected override bool LessThan(TextFragment fragA, TextFragment fragB)
+        {
+            if (fragA.Score == fragB.Score)
+                return fragA.FragNum > fragB.FragNum;
+            else
+                return fragA.Score < fragB.Score;
+        }
     }
 }

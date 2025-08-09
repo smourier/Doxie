@@ -26,22 +26,22 @@ namespace Doxie.Model.Highlighting;
 /// </summary>
 public sealed class OffsetLimitTokenFilter : TokenFilter
 {
-    private int offsetCount;
-    private readonly IOffsetAttribute offsetAttrib;
-    private readonly int offsetLimit;
+    private int _offsetCount;
+    private readonly IOffsetAttribute _offsetAttrib;
+    private readonly int _offsetLimit;
 
     public OffsetLimitTokenFilter(TokenStream input, int offsetLimit) : base(input)
     {
-        this.offsetLimit = offsetLimit;
-        offsetAttrib = GetAttribute<IOffsetAttribute>();
+        _offsetLimit = offsetLimit;
+        _offsetAttrib = GetAttribute<IOffsetAttribute>();
     }
 
     public override bool IncrementToken()
     {
-        if (offsetCount < offsetLimit && m_input.IncrementToken())
+        if (_offsetCount < _offsetLimit && m_input.IncrementToken())
         {
-            int offsetLength = offsetAttrib.EndOffset - offsetAttrib.StartOffset;
-            offsetCount += offsetLength;
+            int offsetLength = _offsetAttrib.EndOffset - _offsetAttrib.StartOffset;
+            _offsetCount += offsetLength;
             return true;
         }
         return false;
@@ -50,6 +50,6 @@ public sealed class OffsetLimitTokenFilter : TokenFilter
     public override void Reset()
     {
         base.Reset();
-        offsetCount = 0;
+        _offsetCount = 0;
     }
 }

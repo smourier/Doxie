@@ -36,7 +36,7 @@ public interface IScorer
     /// using the same <see cref="TokenStream"/> that was passed in.
     /// </returns> 
     /// <exception cref="IOException">If there is a low-level I/O error</exception>
-    TokenStream Init(TokenStream tokenStream);
+    TokenStream? Init(TokenStream tokenStream);
 
     /// <summary>
     /// Called when a new fragment is started for consideration.

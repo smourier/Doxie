@@ -21,37 +21,20 @@
 /// Low-level class used to record information about a section of a document 
 /// with a score.
 /// </summary>
-public class TextFragment
+public class TextFragment(StringBuilder markedUpText, int textStartPos, int fragNum)
 {
-    internal readonly StringBuilder markedUpText;
-    internal int fragNum;
-    internal float score;
+    private readonly StringBuilder _markedUpText = markedUpText ?? throw new ArgumentNullException(nameof(markedUpText));
 
-    public TextFragment(StringBuilder markedUpText, int textStartPos, int fragNum)
-    {
-        this.markedUpText = markedUpText;
-        this.TextStartPos = textStartPos;
-        this.fragNum = fragNum;
-    }
-
-    public virtual float Score
-    {
-        get => score;
-        protected internal set => score = value;
-    }
+    public virtual float Score { get; protected internal set; }
 
     // LUCENENET specific - made these fields into properties, since they are for internal consumption
     internal int TextEndPos { get; set; }
-    internal int TextStartPos { get; set; }
+    internal int TextStartPos { get; set; } = textStartPos;
 
     /// <summary>
     /// the fragment sequence number
     /// </summary>
-    public virtual int FragNum
-    {
-        get => fragNum;
-        protected internal set => fragNum = value;
-    }
+    public virtual int FragNum { get; protected internal set; } = fragNum;
 
     /// <param name="frag2">Fragment to be merged into this one</param>
     public virtual void Merge(TextFragment frag2)
@@ -63,16 +46,10 @@ public class TextFragment
     /// <summary>
     /// true if this fragment follows the one passed
     /// </summary>
-    public virtual bool Follows(TextFragment fragment)
-    {
-        return TextStartPos == fragment.TextEndPos;
-    }
+    public virtual bool Follows(TextFragment fragment) => TextStartPos == fragment.TextEndPos;
 
     /// <summary>
     /// Returns the marked-up text for this text fragment 
     /// </summary>
-    public override string ToString()
-    {
-        return markedUpText.ToString(TextStartPos, TextEndPos - TextStartPos);
-    }
+    public override string ToString() => _markedUpText.ToString(TextStartPos, TextEndPos - TextStartPos);
 }

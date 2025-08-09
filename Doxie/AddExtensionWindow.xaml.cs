@@ -11,10 +11,7 @@ public partial class AddExtensionWindow : Window
 
     public string? Extension { get; set; }
 
-    private void UpdateControls()
-    {
-        ok.IsEnabled = !string.IsNullOrWhiteSpace(Extension);
-    }
+    private void UpdateControls() => ok.IsEnabled = !string.IsNullOrWhiteSpace(Extension);
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
