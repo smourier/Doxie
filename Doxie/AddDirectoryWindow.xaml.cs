@@ -11,7 +11,10 @@ public partial class AddDirectoryWindow : Window
 
     public string? DirectoryName { get; set; }
 
-    private void UpdateControls() => ok.IsEnabled = !string.IsNullOrWhiteSpace(DirectoryName);
+    private void UpdateControls()
+    {
+        ok.IsEnabled = !string.IsNullOrWhiteSpace(DirectoryName);
+    }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

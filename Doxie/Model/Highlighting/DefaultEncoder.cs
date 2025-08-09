@@ -20,5 +20,10 @@
 /// <summary>Simple <see cref="IEncoder"/> implementation that does not modify the output</summary>
 public class DefaultEncoder : IEncoder
 {
-    public virtual string EncodeText(string originalText) => originalText;
+    public DefaultEncoder() { }
+
+    public virtual string EncodeText(string originalText)
+    {
+        return originalText;
+    }
 }

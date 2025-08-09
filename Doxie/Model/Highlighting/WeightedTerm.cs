@@ -20,17 +20,23 @@
     /// <summary>
     /// Lightweight class to hold term and a Weight value used for scoring this term
     /// </summary>
-    public class WeightedTerm(float weight, string term)
+    public class WeightedTerm
     {
+        public WeightedTerm(float weight, string term)
+        {
+            Weight = weight;
+            Term = term;
+        }
+
         /// <summary>
         /// the term value (stemmed)
         /// </summary>
-        public virtual string Term { get; set; } = term;
+        public virtual string Term { get; set; }
 
         /// <summary>
         /// the Weight associated with this term
         /// </summary>
         /// <value> </value>
-        public virtual float Weight { get; set; } = weight;
+        public virtual float Weight { get; set; }
     }
 }

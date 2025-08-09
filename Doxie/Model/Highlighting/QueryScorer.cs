@@ -32,20 +32,21 @@ namespace Doxie.Model.Highlighting;
 /// </summary>
 public class QueryScorer : IScorer
 {
-    private float _totalScore;
-    private JCG.HashSet<string>? _foundTerms;
-    private IDictionary<string, WeightedSpanTerm>? _fieldWeightedSpanTerms;
-    private readonly float _maxTermWeight;
-    private int _position = -1;
-    private readonly string? _defaultField;
-    private ICharTermAttribute? _termAtt;
-    private IPositionIncrementAttribute? _posIncAtt;
-    private Query? _query;
-    private string? _field;
-    private IndexReader? _reader;
-    private readonly bool _skipInitExtractor;
-    private bool _wrapToCaching = true;
-    private int _maxCharsToAnalyze;
+    private float totalScore;
+    private ISet<string> foundTerms;
+    private IDictionary<string, WeightedSpanTerm> fieldWeightedSpanTerms;
+    private readonly float maxTermWeight;
+    private int position = -1;
+    private readonly string defaultField;
+    private ICharTermAttribute termAtt;
+    private IPositionIncrementAttribute posIncAtt;
+    private bool expandMultiTermQuery = true;
+    private Query query;
+    private string field;
+    private IndexReader reader;
+    private readonly bool skipInitExtractor;
+    private bool wrapToCaching = true;
+    private int maxCharsToAnalyze;
 
     /// <summary>
     /// Constructs a new <see cref="QueryScorer"/> instance
@@ -86,7 +87,7 @@ public class QueryScorer : IScorer
     /// <param name="defaultField">The default field for queries with the field name unspecified</param>
     public QueryScorer(Query query, IndexReader reader, string field, string defaultField)
     {
-        _defaultField = defaultField.Intern();
+        this.defaultField = defaultField.Intern();
         Init(query, field, reader, true);
     }
 
@@ -98,7 +99,7 @@ public class QueryScorer : IScorer
     /// <param name="defaultField">The default field for queries with the field name unspecified</param>
     public QueryScorer(Query query, string field, string defaultField)
     {
-        _defaultField = defaultField.Intern();
+        this.defaultField = defaultField.Intern();
         Init(query, field, null, true);
     }
 
@@ -108,67 +109,69 @@ public class QueryScorer : IScorer
     /// <param name="weightedTerms">an array of pre-created <see cref="WeightedSpanTerm"/>s</param>
     public QueryScorer(WeightedSpanTerm[] weightedTerms)
     {
-        _fieldWeightedSpanTerms = new JCG.Dictionary<string, WeightedSpanTerm>(weightedTerms.Length);
+        fieldWeightedSpanTerms = new JCG.Dictionary<string, WeightedSpanTerm>(weightedTerms.Length);
 
         foreach (WeightedSpanTerm t in weightedTerms)
         {
-            if (!_fieldWeightedSpanTerms.TryGetValue(t.Term, out var existingTerm) ||
+            if (!fieldWeightedSpanTerms.TryGetValue(t.Term, out WeightedSpanTerm existingTerm) ||
                 existingTerm is null ||
                 existingTerm.Weight < t.Weight)
             {
                 // if a term is defined more than once, always use the highest
                 // scoring Weight
-                _fieldWeightedSpanTerms[t.Term] = t;
-                _maxTermWeight = Math.Max(_maxTermWeight, t.Weight);
+                fieldWeightedSpanTerms[t.Term] = t;
+                maxTermWeight = Math.Max(maxTermWeight, t.Weight);
             }
         }
-        _skipInitExtractor = true;
+        skipInitExtractor = true;
     }
 
     /// <seealso cref="IScorer.FragmentScore"/>
-    public virtual float FragmentScore => _totalScore;
+    public virtual float FragmentScore => totalScore;
 
     /// <summary>
     /// The highest weighted term (useful for passing to <see cref="GradientFormatter"/> to set top end of coloring scale).
     /// </summary>
-    public virtual float MaxTermWeight => _maxTermWeight;
+    public virtual float MaxTermWeight => maxTermWeight;
 
     /// <seealso cref="IScorer.GetTokenScore()"/>
     public virtual float GetTokenScore()
     {
-        if (_fieldWeightedSpanTerms is null || _termAtt is null || _posIncAtt is null || _foundTerms == null)
-            throw new InvalidOperationException("QueryScorer must be initialized with a Query before calling GetTokenScore");
+        position += posIncAtt.PositionIncrement;
+        string termText = termAtt.ToString();
 
-        _position += _posIncAtt.PositionIncrement;
-        var termText = _termAtt.ToString();
-
-        if (!_fieldWeightedSpanTerms.TryGetValue(termText, out var weightedSpanTerm) || weightedSpanTerm is null)
+        if (!fieldWeightedSpanTerms.TryGetValue(termText, out WeightedSpanTerm weightedSpanTerm) || weightedSpanTerm is null)
+        {
             return 0;
+        }
 
-        if (weightedSpanTerm.IsPositionSensitive && !weightedSpanTerm.CheckPosition(_position))
+        if (weightedSpanTerm.IsPositionSensitive &&
+            !weightedSpanTerm.CheckPosition(position))
+        {
             return 0;
+        }
 
-        var score = weightedSpanTerm.Weight;
+        float score = weightedSpanTerm.Weight;
 
         // found a query term - is it unique in this doc?
-        if (!_foundTerms.Contains(termText))
+        if (!foundTerms.Contains(termText))
         {
-            _totalScore += score;
-            _foundTerms.Add(termText);
+            totalScore += score;
+            foundTerms.Add(termText);
         }
 
         return score;
     }
 
     /// <seealso cref="IScorer.Init"/>
-    public virtual TokenStream? Init(TokenStream tokenStream)
+    public virtual TokenStream Init(TokenStream tokenStream)
     {
-        _position = -1;
-        _termAtt = tokenStream.AddAttribute<ICharTermAttribute>();
-        _posIncAtt = tokenStream.AddAttribute<IPositionIncrementAttribute>();
-        if (!_skipInitExtractor)
+        position = -1;
+        termAtt = tokenStream.AddAttribute<ICharTermAttribute>();
+        posIncAtt = tokenStream.AddAttribute<IPositionIncrementAttribute>();
+        if (!skipInitExtractor)
         {
-            _fieldWeightedSpanTerms?.Clear();
+            fieldWeightedSpanTerms?.Clear();
             return InitExtractor(tokenStream);
         }
         return null;
@@ -180,39 +183,36 @@ public class QueryScorer : IScorer
     /// </summary>
     /// <param name="token">token to get <see cref="WeightedSpanTerm"/> for</param>
     /// <returns><see cref="WeightedSpanTerm"/> for token</returns>
-    public virtual WeightedSpanTerm? GetWeightedSpanTerm(string token)
+    public virtual WeightedSpanTerm GetWeightedSpanTerm(string token)
     {
-        if (_fieldWeightedSpanTerms == null)
-            return null;
-
-        _fieldWeightedSpanTerms.TryGetValue(token, out var result);
+        fieldWeightedSpanTerms.TryGetValue(token, out WeightedSpanTerm result);
         return result;
     }
 
-    private void Init(Query query, string? field, IndexReader? reader, bool expandMultiTermQuery)
+    private void Init(Query query, string field, IndexReader reader, bool expandMultiTermQuery)
     {
-        _reader = reader;
-        ExpandMultiTermQuery = expandMultiTermQuery;
-        _query = query;
-        _field = field;
+        this.reader = reader;
+        this.expandMultiTermQuery = expandMultiTermQuery;
+        this.query = query;
+        this.field = field;
     }
 
-    private TokenStream? InitExtractor(TokenStream tokenStream)
+    private TokenStream InitExtractor(TokenStream tokenStream)
     {
-        if (_query == null)
-            throw new InvalidOperationException("QueryScorer must be initialized with a Query before calling InitExtractor");
+        WeightedSpanTermExtractor qse = NewTermExtractor(defaultField);
 
-        var qse = NewTermExtractor(_defaultField);
-        qse.SetMaxDocCharsToAnalyze(_maxCharsToAnalyze);
-        qse.ExpandMultiTermQuery = ExpandMultiTermQuery;
-        qse.SetWrapIfNotCachingTokenFilter(_wrapToCaching);
-        if (_reader is null)
+        qse.SetMaxDocCharsToAnalyze(maxCharsToAnalyze);
+        qse.ExpandMultiTermQuery = expandMultiTermQuery;
+        qse.SetWrapIfNotCachingTokenFilter(wrapToCaching);
+        if (reader is null)
         {
-            _fieldWeightedSpanTerms = qse.GetWeightedSpanTerms(_query, tokenStream, _field);
+            fieldWeightedSpanTerms = qse.GetWeightedSpanTerms(query,
+                                                                   tokenStream, field);
         }
         else
         {
-            _fieldWeightedSpanTerms = qse.GetWeightedSpanTermsWithScores(_query, tokenStream, _field, _reader);
+            fieldWeightedSpanTerms = qse.GetWeightedSpanTermsWithScores(query,
+                                                         tokenStream, field, reader);
         }
         if (qse.IsCachedTokenStream)
         {
@@ -222,13 +222,17 @@ public class QueryScorer : IScorer
         return null;
     }
 
-    protected virtual WeightedSpanTermExtractor NewTermExtractor(string? defaultField) => defaultField is null ? new WeightedSpanTermExtractor() : new WeightedSpanTermExtractor(defaultField);
+    protected virtual WeightedSpanTermExtractor NewTermExtractor(string defaultField)
+    {
+        return defaultField is null ? new WeightedSpanTermExtractor()
+            : new WeightedSpanTermExtractor(defaultField);
+    }
 
     /// <seealso cref="IScorer.StartFragment"/>
     public virtual void StartFragment(TextFragment newFragment)
     {
-        _foundTerms = [];
-        _totalScore = 0;
+        foundTerms = new JCG.HashSet<string>();
+        totalScore = 0;
     }
 
     /// <summary>
@@ -236,7 +240,11 @@ public class QueryScorer : IScorer
     /// against a <see cref="Index.Memory.MemoryIndex"/> <see cref="IndexReader"/>.
     /// <c>true</c> if multi-term queries should be expanded
     /// </summary>
-    public virtual bool ExpandMultiTermQuery { get; set; } = true;
+    public virtual bool ExpandMultiTermQuery
+    {
+        get => expandMultiTermQuery;
+        set => expandMultiTermQuery = value;
+    }
 
     /// <summary>
     /// By default, <see cref="TokenStream"/>s that are not of the type
@@ -245,7 +253,13 @@ public class QueryScorer : IScorer
     /// <see cref="TokenStream"/> impl and you don't want it to be wrapped, set this to
     /// false.
     /// </summary>
-    public virtual void SetWrapIfNotCachingTokenFilter(bool wrap) => _wrapToCaching = wrap;
+    public virtual void SetWrapIfNotCachingTokenFilter(bool wrap)
+    {
+        wrapToCaching = wrap;
+    }
 
-    public virtual void SetMaxDocCharsToAnalyze(int maxDocCharsToAnalyze) => _maxCharsToAnalyze = maxDocCharsToAnalyze;
+    public virtual void SetMaxDocCharsToAnalyze(int maxDocCharsToAnalyze)
+    {
+        maxCharsToAnalyze = maxDocCharsToAnalyze;
+    }
 }

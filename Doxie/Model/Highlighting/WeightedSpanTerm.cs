@@ -25,7 +25,7 @@ namespace Doxie.Model.Highlighting;
 public class WeightedSpanTerm : WeightedTerm
 {
     private bool _positionSensitive;
-    private readonly JCG.List<PositionSpan> _positionSpans = [];
+    private readonly JCG.List<PositionSpan> _positionSpans = new JCG.List<PositionSpan>();
 
     public WeightedSpanTerm(float weight, string term)
         : base(weight, term)
@@ -63,7 +63,10 @@ public class WeightedSpanTerm : WeightedTerm
         return false;
     }
 
-    public virtual void AddPositionSpans(IList<PositionSpan> positionSpans) => _positionSpans.AddRange(positionSpans);
+    public virtual void AddPositionSpans(IList<PositionSpan> positionSpans)
+    {
+        _positionSpans.AddRange(positionSpans);
+    }
 
     public virtual bool IsPositionSensitive
     {

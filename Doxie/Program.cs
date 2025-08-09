@@ -16,7 +16,10 @@ internal static class Program
         app.Run();
     }
 
-    private static void DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e) => e.Handled = true;
+    private static void DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        e.Handled = true;
+    }
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
