@@ -173,7 +173,7 @@ public class Index : INotifyPropertyChanged, IDisposable
             return false;
 
         Directories.Remove(dir);
-        DeleteDirectory(path);
+        DeleteDirectory(dir);
         OnPropertyChanged(nameof(Directories));
         return true;
     });
@@ -343,15 +343,17 @@ public class Index : INotifyPropertyChanged, IDisposable
     protected virtual bool SaveDirectoryBatch(IndexDirectoryBatch batch)
     {
         ArgumentNullException.ThrowIfNull(batch);
+        if (batch.Directory == null)
+            throw new InvalidOperationException();
 
         // delete other batches' lucene documents
-        var batches = _sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", batch.Directory.Path);
+        var batches = _sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", batch.Directory.Id);
         foreach (var deleteDataBatch in batches.Where(b => b.Id != batch.Id))
         {
             DeleteDocuments(deleteDataBatch);
         }
 
-        var db = DirectoryBatch.From(new Directory(_sqlDirectory.Database) { Path = batch.Directory.Path }, batch);
+        var db = DirectoryBatch.From(new Directory(_sqlDirectory.Database) { Path = batch.Directory.Path, Id = batch.Directory.Id, }, batch);
         return _sqlDirectory.Save(db);
     }
 
@@ -365,14 +367,14 @@ public class Index : INotifyPropertyChanged, IDisposable
         _sqlDirectory.Save(batchData);
     }
 
-    public virtual bool DeleteDirectory(string path) => Extensions.WrapDispatcher(() =>
+    public virtual bool DeleteDirectory(IndexDirectory dir) => Extensions.WrapDispatcher(() =>
     {
-        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(dir);
         _sqlDirectory.Database.BeginTransaction();
         try
         {
-            var ret = _sqlDirectory.Database.Delete(new Directory(_sqlDirectory.Database) { Path = path });
-            if (_sqlDirectory.Database.ExecuteNonQuery($"DELETE FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", path) > 0)
+            var ret = _sqlDirectory.Database.Delete(new Directory(_sqlDirectory.Database) { Id = dir.Id });
+            if (_sqlDirectory.Database.ExecuteNonQuery($"DELETE FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", dir.Id) > 0)
             {
                 ret = true;
             }
@@ -597,7 +599,7 @@ public class Index : INotifyPropertyChanged, IDisposable
                 throw new InvalidOperationException();
 
             var dir = new IndexDirectory(index, directory.Id, directory.Path);
-            foreach (var batch in index._sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", directory.Path))
+            foreach (var batch in index._sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", directory.Id))
             {
                 dir.Batches.Add(batch.ToIndexDirectoryBatch(dir));
             }
