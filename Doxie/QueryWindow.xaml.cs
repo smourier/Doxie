@@ -9,15 +9,16 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private int _totalHits;
     private readonly Task _webView2Initialized;
     private readonly EditorControlObject _eco = new();
-    private char[]? _buffer;
-    private int? _bufferSize;
-    private StreamReader? _reader;
+    private LinesStream? _stream;
+    private int _currentStreamLine = -1;
+    private int _linesCount;
+    private bool _isLinesCountVisible;
     private string? _modelLanguageName;
 
-    public QueryWindow(Model.Index index)
+    public QueryWindow(string indexFilePath)
     {
-        ArgumentNullException.ThrowIfNull(index);
-        Index = index;
+        ArgumentNullException.ThrowIfNull(indexFilePath);
+        Index = Model.Index.OpenRead(indexFilePath);
         _eco.Load += EditorControlOnLoad;
         _eco.Event += EditorControlEvent;
 
@@ -39,6 +40,32 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                 return;
 
             _modelLanguageName = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int LinesCount
+    {
+        get => _linesCount;
+        set
+        {
+            if (_linesCount == value)
+                return;
+
+            _linesCount = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsLinesCountVisible
+    {
+        get => _isLinesCountVisible;
+        set
+        {
+            if (_isLinesCountVisible == value)
+                return;
+
+            _isLinesCountVisible = value;
             OnPropertyChanged();
         }
     }
@@ -100,8 +127,19 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
-        _reader?.Dispose();
+        _stream?.Dispose();
         webView?.Dispose();
+        Index?.Dispose();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -139,16 +177,22 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         {
             var encoding = EncodingDetector.DetectEncoding(item.Path, Settings.Current.EncodingDetectorMode);
 
-            _reader?.Dispose();
-            _reader = new StreamReader(item.Path, encoding);
-            var max = Settings._defaultMaxLoadBufferSize;
-
-            _bufferSize = (int)Math.Min(_reader.BaseStream.Length, max);
+            _stream?.Dispose();
+            IsLinesCountVisible = false;
+            _stream = new LinesStream(item.Path, encoding);
+            _stream.Loaded += (s, e) =>
+            {
+                LinesCount = _stream.Lines.Count;
+                IsLinesCountVisible = true;
+            };
+            _stream.Load();
             await webView.ExecuteScriptAsync($"loadFromHost()");
 
             await SetEditorPosition();
             await MoveEditorTo(1, 1);
             await SetLanguage(item);
+
+            Index.Highlight(Query, _stream.Text);
 
             await HighlightRanges([new MonacoRange(2, 4, 3, 6)]);
             return true;
@@ -156,40 +200,29 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
-            _reader?.Dispose();
-            _reader = null;
-            _buffer = null;
-            _bufferSize = null;
+            _stream?.Dispose();
+            _stream = null;
             return false;
         }
     }
 
     private void EditorControlOnLoad(object? sender, EditorControlLoadEventArgs e)
     {
-        if (_reader == null || !_bufferSize.HasValue)
+        if (_stream == null)
         {
             e.DocumentText = null;
-            _reader?.Dispose();
-            _reader = null;
-            _buffer = null;
-            _bufferSize = null;
             return;
         }
 
-        _buffer = new char[_bufferSize.Value];
-
-        var read = (_reader?.ReadBlock(_buffer, 0, _buffer.Length)).GetValueOrDefault();
-        if (read == 0)
+        _currentStreamLine += 1;
+        if (_stream.Lines.Count <= _currentStreamLine)
         {
             e.DocumentText = null;
-            _reader?.Dispose();
-            _reader = null;
-            _buffer = null;
-            _bufferSize = null;
+            _currentStreamLine = -1;
             return;
         }
 
-        e.DocumentText = new string(_buffer, 0, read);
+        e.DocumentText = _stream.GetText(_currentStreamLine) + Environment.NewLine;
     }
 
     private Task<string> EnableMinimap(bool enabled) => webView.ExecuteScriptAsync("editor.updateOptions({minimap:{enabled:" + enabled.ToString().ToLowerInvariant() + "}})");
@@ -250,5 +283,14 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                 }
                 break;
         }
+    }
+
+    private void OpenInExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        var item = sender.GetDataContext<IndexSearchResultItem>();
+        if (item == null || !IOUtilities.PathIsFile(item.Path))
+            return;
+
+        Process.Start(new ProcessStartInfo { FileName = item.Path, UseShellExecute = true });
     }
 }

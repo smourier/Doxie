@@ -67,7 +67,9 @@ public partial class IndexingWindow : Window
 
     private void OnFileIndexing(object? sender, IndexingEventArgs e) => Dispatcher.BeginInvoke(() =>
     {
+        directory.Text = Path.GetDirectoryName(e.FilePath);
         statusText.Text = Path.GetFileName(e.FilePath);
+        numberOfDocuments.Text = e.Batch.NumberOfDocuments + " documents";
     });
 
     private bool ConfirmClose(bool canClose)

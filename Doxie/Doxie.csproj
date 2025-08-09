@@ -46,6 +46,7 @@
 		<Using Include="Microsoft.Web.WebView2.Wpf" />
 		<Using Include="Microsoft.Win32" />
 		<Using Include="System" />
+		<Using Include="System.Buffers" />
 		<Using Include="System.Collections" />
 		<Using Include="System.Collections.Concurrent" />
 		<Using Include="System.Collections.Generic" />

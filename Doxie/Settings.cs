@@ -10,8 +10,6 @@ public class Settings : Serializable<Settings>
     public static string PerceivedTypesFilePath { get; }
     public static string TempDirectoryPath { get; }
 
-    internal const uint _defaultMaxLoadBufferSize = 65536 * 16;
-
     static Settings()
     {
         // data is stored in user's Documents

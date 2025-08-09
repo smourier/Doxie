@@ -36,6 +36,7 @@ public static class DictionaryExtensions
         return string.Format(provider, "{0}", obj).Nullify();
     }
 
+    public static T? GetValue<T>(this IReadOnlyDictionary<string, string?>? dictionary, string name, T? defaultValue = default) => GetValue(dictionary, name, null, defaultValue);
     public static T? GetValue<T>(this IReadOnlyDictionary<string, string?>? dictionary, string name, IFormatProvider? provider = null, T? defaultValue = default)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -58,6 +59,7 @@ public static class DictionaryExtensions
         return Conversions.TryChangeType(str, provider, out value);
     }
 
+    public static T? GetValue<T>(this IReadOnlyDictionary<string, object?>? dictionary, string name, T? defaultValue = default) => GetValue(dictionary, name, null, defaultValue);
     public static T? GetValue<T>(this IReadOnlyDictionary<string, object?>? dictionary, string name, IFormatProvider? provider = null, T? defaultValue = default)
     {
         ArgumentNullException.ThrowIfNull(name);

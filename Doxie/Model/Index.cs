@@ -16,6 +16,7 @@ public class Index : INotifyPropertyChanged, IDisposable
     public const string FieldDir = "dir";
     public const string FieldExt = "ext";
     public const string FieldBatchId = "batchId";
+    public const string FieldLinesCount = "linesCount";
 
     // database settings
     private const string _version = "version";
@@ -300,13 +301,16 @@ public class Index : INotifyPropertyChanged, IDisposable
             }
 
             var relPath = Path.GetRelativePath(request.InputDirectory.Path, entry);
-            var file = File.ReadAllText(entry);
+
+            var encoding = EncodingDetector.DetectEncoding(entry, Settings.Current.EncodingDetectorMode);
+            var lines = File.ReadAllLines(entry, encoding);
 
             var pathForIndex = relPath;
 
             var idx = new IndexDocument(DefaultFieldName);
-            idx.AddField(DefaultFieldName, pathForIndex + " " + file.Trim());
+            idx.AddField(DefaultFieldName, pathForIndex + " " + string.Join(Environment.NewLine, lines));
             idx.AddField(FieldExt, ext, true);
+            idx.AddField(FieldLinesCount, lines.Length, true);
             idx.AddField(FieldBatchId, batch.Id.ToString("N"), true);
             idx.AddField(FieldDir, request.InputDirectory.Path, true);
             idx.AddField(FieldRelPath, relPath, true);
@@ -432,13 +436,13 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public virtual void DeleteItems(string text, string defaultFieldName, bool commit = true)
+    public virtual void DeleteItems(string query, string defaultFieldName, bool commit = true)
     {
-        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(defaultFieldName);
 
         var parser = new QueryParser(LuceneVersion.LUCENE_48, defaultFieldName, _analyzer) { AllowLeadingWildcard = true, };
-        var qry = parser.Parse(text);
+        var qry = parser.Parse(query);
         GetWriter().DeleteDocuments(qry);
         if (commit)
         {
@@ -446,30 +450,50 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public SearchResult<SearchResultItem> Search(string text, int maximumDocuments = int.MaxValue)
-        => Search<SearchResultItem>(text, maximumDocuments);
+    private static readonly Lazy<PropertyInfo> _fragmentTextStartPos = new(() =>
+        typeof(TextFragment).GetProperty("TextStartPos", BindingFlags.NonPublic | BindingFlags.Instance) ??
+        throw new InvalidOperationException("Could not find TextStartPos property on TextFragment."));
 
-    public virtual SearchResult<T> Search<T>(string text, int maximumDocuments = int.MaxValue) where T : SearchResultItem, new()
+    private static readonly Lazy<PropertyInfo> _fragmentTextEndPos = new(() =>
+        typeof(TextFragment).GetProperty("TextEndPos", BindingFlags.NonPublic | BindingFlags.Instance) ??
+        throw new InvalidOperationException("Could not find TextEndPos property on TextFragment."));
+
+    public IReadOnlyList<IndexFragment> Highlight(string query, string originalText)
     {
-        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(originalText);
+
+        var analyzer = new StandardAnalyzer(LuceneVersion.LUCENE_48);
+
+        var parser = new QueryParser(LuceneVersion.LUCENE_48, DefaultFieldName, analyzer) { AllowLeadingWildcard = true, };
+        var qry = parser.Parse(query);
+        var scorer = new QueryScorer(qry, DefaultFieldName);
+        var highlighter = new Highlighter(scorer);
+        var tokenStream = analyzer.GetTokenStream(DefaultFieldName, originalText);
+        var fragments = highlighter.GetBestTextFragments(tokenStream, originalText, false, 0x7FFFFEFF);
+
+        var list = new List<IndexFragment>();
+        foreach (var fragment in fragments)
+        {
+            var startOffset = (int)_fragmentTextStartPos.Value.GetValue(fragment)!;
+            var endOffset = (int)_fragmentTextEndPos.Value.GetValue(fragment)!;
+            list.Add(new IndexFragment(startOffset, endOffset));
+        }
+        return list;
+    }
+
+    public SearchResult<SearchResultItem> Search(string query, int maximumDocuments = int.MaxValue)
+        => Search<SearchResultItem>(query, maximumDocuments);
+
+    public virtual SearchResult<T> Search<T>(string query, int maximumDocuments = int.MaxValue) where T : SearchResultItem, new()
+    {
+        ArgumentNullException.ThrowIfNull(query);
         if (_searcher == null)
             throw new InvalidOperationException("Cannot search in a write-only index.");
 
-        var parser = new QueryParser(LuceneVersion.LUCENE_48, DefaultFieldName, _analyzer)
-        {
-            AllowLeadingWildcard = true,
-        };
-
-        var qry = parser.Parse(text);
-        var scorer = new QueryScorer(qry);
-        var highlighter = new Highlighter(scorer)
-        {
-            TextFragmenter = new SimpleFragmenter(1000) // fragment size
-        };
-        highlighter.g
-
+        var parser = new QueryParser(LuceneVersion.LUCENE_48, DefaultFieldName, _analyzer) { AllowLeadingWildcard = true, };
+        var qry = parser.Parse(query);
         var topDocs = _searcher.Search(qry, maximumDocuments);
-
         var result = new SearchResult<T>
         {
             TotalHits = topDocs.TotalHits

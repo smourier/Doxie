@@ -64,15 +64,30 @@
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="Height" Value="30" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                     </Style>
                 </ListView.ItemContainerStyle>
                 <ListView.ItemTemplate>
                     <DataTemplate DataType="model:IndexSearchResultItem">
                         <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
                             <TextBlock
                                 VerticalAlignment="Center"
                                 Text="{Binding RelativePath}"
                                 ToolTip="{Binding Path}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Margin="5,0,5,0"
+                                VerticalAlignment="Center"
+                                Text="{Binding LinesCount, StringFormat={}{0} lines}" />
+                            <Grid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Click="OpenInExplorer_Click" Header="Open in Explorer..." />
+                                </ContextMenu>
+                            </Grid.ContextMenu>
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
@@ -118,6 +133,10 @@
             Background="#202020">
             <StatusBarItem HorizontalAlignment="Stretch">
                 <TextBlock Foreground="White" Text="{Binding Item.Path}" />
+            </StatusBarItem>
+            <Separator Visibility="{Binding IsLinesCountVisible, Converter={StaticResource BoolToVis}}" />
+            <StatusBarItem HorizontalAlignment="Right" Visibility="{Binding IsLinesCountVisible, Converter={StaticResource BoolToVis}}">
+                <TextBlock Foreground="White" Text="{Binding LinesCount, StringFormat={}{0} lines}" />
             </StatusBarItem>
             <Separator />
             <StatusBarItem HorizontalAlignment="Right">

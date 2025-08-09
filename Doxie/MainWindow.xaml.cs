@@ -354,8 +354,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (Index == null)
             return;
 
-        var search = Model.Index.OpenRead(Index.FilePath);
-        var queryWindow = new QueryWindow(search)
+        var queryWindow = new QueryWindow(Index.FilePath)
         {
             Owner = this,
             Width = Width - 40,
