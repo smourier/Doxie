@@ -129,7 +129,8 @@
                     x:Name="queryIndex"
                     Margin="5"
                     Click="QueryIndex_Click"
-                    Content="Query index...">
+                    Content="Query index..."
+                    ToolTip="Ctrl+Q to open">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackground" Color="#7EE629" />
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#85FA25" />
@@ -139,14 +140,16 @@
                 <Button
                     x:Name="addDirectory"
                     Margin="5"
-                    Click="AddDirectory_Click">
+                    Click="AddDirectory_Click"
+                    ToolTip="Ctrl+A to open">
                     Add directory to index...
                 </Button>
 
                 <Button
                     x:Name="addMultipleDirectories"
                     Margin="5"
-                    Click="AddMultipleDirectories_Click">
+                    Click="AddMultipleDirectories_Click"
+                    ToolTip="Ctrl+M to open">
                     Add multiple directories to index...
                 </Button>
 

@@ -12,6 +12,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _ = Task.Run(Settings.Current.CleanRecentFiles);
 
         //Extensions.SaveDefaultTemplate<GridSplitter>();
+        var lastRecent = Settings.Current.RecentFiles.FirstOrDefault()?.FilePath;
+        if (lastRecent != null)
+        {
+            OpenIndex(lastRecent);
+        }
     }
 
     public Model.Index? Index { get; private set; }
@@ -74,6 +79,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (lastRecent != null)
             {
                 OpenIndex(lastRecent);
+            }
+        }
+
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            switch (e.Key)
+            {
+                case Key.Q:
+                    QueryIndex_Click(null!, null!);
+                    break;
+
+                case Key.A:
+                    AddDirectory_Click(null!, null!);
+                    break;
+
+                case Key.M:
+                    AddDirectory_Click(null!, null!);
+                    break;
             }
         }
     }

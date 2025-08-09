@@ -30,8 +30,7 @@
         <TextBlock
             Margin="5"
             VerticalAlignment="Center"
-            Text="Query:"
-            ToolTip="Search for Query Parser Syntax - Apache Lucene for advanced queries" />
+            Text="Query:" />
         <Grid Grid.Column="1">
             <TextBox
                 x:Name="query"
