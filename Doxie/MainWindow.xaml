@@ -264,6 +264,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBlock VerticalAlignment="Center" Text="{Binding Path}" />
                             <Button
@@ -279,6 +280,13 @@
                                 Margin="5"
                                 Click="ScanDir_Click">
                                 Scan
+                            </Button>
+                            <Button
+                                x:Name="open"
+                                Grid.Column="3"
+                                Margin="5"
+                                Click="OpenInExplorer_Click">
+                                Open in Explorer...
                             </Button>
                         </Grid>
                     </DataTemplate>

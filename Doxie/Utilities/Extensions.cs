@@ -395,4 +395,41 @@ public static class Extensions
 
         return dispatcher.Invoke(func);
     }
+
+    public static void OpenInExplorerFromParent(this string? path)
+    {
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            try
+            {
+                var psi = new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+                {
+                    UseShellExecute = true,
+                    CreateNoWindow = true,
+                };
+                Process.Start(psi);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    public static void OpenInExplorer(this string? path)
+    {
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    UseShellExecute = true,
+                    FileName = path,
+                });
+            }
+            catch
+            {
+            }
+        }
+    }
 }

@@ -411,4 +411,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ;
         queryWindow.Show();
     }
+
+    private void OpenInExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = sender.GetDataContext<IndexDirectory>();
+        if (dir == null)
+            return;
+
+        Extensions.OpenInExplorer(dir.Path);
+    }
 }

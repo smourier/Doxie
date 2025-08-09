@@ -359,6 +359,6 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         if (item == null || !IOUtilities.PathIsFile(item.Path))
             return;
 
-        Process.Start(new ProcessStartInfo { FileName = item.Path, UseShellExecute = true });
+        Extensions.OpenInExplorer(item.Path);
     }
 }
