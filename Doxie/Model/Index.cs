@@ -1,9 +1,9 @@
-﻿using Lucene.Net.Analysis.Standard;
+﻿using Doxie.Model.Highlighting;
+using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers.Classic;
 using Lucene.Net.Search;
-using Lucene.Net.Search.Highlight;
 using Lucene.Net.Util;
 using SqlNado;
 
@@ -459,6 +459,13 @@ public class Index : INotifyPropertyChanged, IDisposable
         typeof(TextFragment).GetProperty("TextEndPos", BindingFlags.NonPublic | BindingFlags.Instance) ??
         throw new InvalidOperationException("Could not find TextEndPos property on TextFragment."));
 
+    // we don't want no html here
+    private sealed class NullFormatter : IFormatter
+    {
+        public static NullFormatter Instance { get; } = new();
+        public string HighlightTerm(string originalText, TokenGroup tokenGroup) => originalText;
+    }
+
     public IReadOnlyList<IndexFragment> Highlight(string query, string originalText)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -468,22 +475,28 @@ public class Index : INotifyPropertyChanged, IDisposable
         var analyzer = new StandardAnalyzer(LuceneVersion.LUCENE_48);
         var parser = new QueryParser(LuceneVersion.LUCENE_48, f, analyzer) { AllowLeadingWildcard = true, };
         var qry = parser.Parse(query);
-        var scorer = new QueryScorer(qry, f);
+        var scorer = new QueryScorer(qry);
 
-        var highlighter = new Highlighter(scorer)
+        var highlighter = new Highlighter(NullFormatter.Instance, scorer)
         {
-            TextFragmenter = new SimpleSpanFragmenter(scorer)
         };
 
+        var fragmentzs = highlighter.GetBestFragments(analyzer, f, originalText, 100);
+
         var tokenStream = analyzer.GetTokenStream(f, originalText);
+        //tokenStream.Reset();
+        //for (var next = tokenStream.IncrementToken(); next; next = tokenStream.IncrementToken())
+        //{
+        //}
 
         var sw = Stopwatch.StartNew();
         var fragments = highlighter.GetBestTextFragments(tokenStream, originalText, false, 100);
+        var texts = fragments.Where(f => f.Score > 0).Select(frag => frag?.ToString() ?? string.Empty).ToArray();
         EventProvider.Default.WriteMessage("sw: " + sw.Elapsed + " count:" + fragments.Length);
         sw.Restart();
 
         var list = new List<IndexFragment>();
-        foreach (var fragment in fragments)
+        foreach (var fragment in fragments.Where(f => f.Score > 0))
         {
             var startOffset = (int)_fragmentTextStartPos.Value.GetValue(fragment)!;
             var endOffset = (int)_fragmentTextEndPos.Value.GetValue(fragment)!;

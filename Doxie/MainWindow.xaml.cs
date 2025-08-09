@@ -269,7 +269,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (fld.ShowDialog(this) == true)
         {
-            var dlg = new AddMultipleDirectories(fld.FolderName)
+            var dlg = new AddMultipleDirectories(fld.FolderName, Index.Directories.Select(p => p.Path))
             {
                 Owner = this,
             };

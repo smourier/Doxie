@@ -4,12 +4,15 @@ public partial class AddMultipleDirectories : Window, INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public AddMultipleDirectories(string directoryPath)
+    public AddMultipleDirectories(string directoryPath, IEnumerable<string> alreadyAdded)
     {
         ArgumentNullException.ThrowIfNull(directoryPath);
+        ArgumentNullException.ThrowIfNull(alreadyAdded);
         DirectoryPath = directoryPath;
         InitializeComponent();
-        list.ItemsSource = Directory.EnumerateDirectories(DirectoryPath, "*.*").Order().Select(d => new DirectoryItem(this, d));
+
+        var added = alreadyAdded.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        list.ItemsSource = Directory.EnumerateDirectories(DirectoryPath, "*.*").Where(p => !added.Contains(p)).Order().Select(d => new DirectoryItem(this, d));
         DataContext = this;
     }
 

@@ -255,10 +255,26 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             await MoveEditorTo(1, 1);
             await SetLanguage(item);
 
-            var text = File.ReadAllText(item.Path, encoding);
-            var list = Index.Highlight(Query, text);
+            if (Settings.Current.MonacoHighlightHits)
+            {
+                // re-reading the whole for hightlighting is (probably) faster than using the stream
+                var text = File.ReadAllText(item.Path, encoding);
+                var list = Index.Highlight(Query, text);
 
-            await HighlightRanges([new MonacoRange(2, 4, 3, 6)]);
+                var ranges = new List<MonacoRange>();
+                foreach (var range in list)
+                {
+                    if (range.IsEmpty)
+                        continue;
+
+                    var lines = _stream.GetLines(range.StartOffset, range.Length).ToArray();
+                }
+
+                if (ranges.Count > 0)
+                {
+                    await HighlightRanges(ranges);
+                }
+            }
             return true;
         }
         catch (Exception ex)

@@ -193,7 +193,11 @@ public class LinesStream : IDisposable
         if (LoadingTask == null && width > 0)
         {
             var line = new Line(lastPosition, width);
-            lock (_lock) lines.Add(line);
+            lock (_lock)
+            {
+                line.Index = lines.Count;
+                lines.Add(line);
+            }
         }
 
         lock (_lock) _lines = [.. lines];
@@ -285,10 +289,12 @@ public class LinesStream : IDisposable
             {
                 if (LoadingTask != null)
                 {
+                    line.Index = taskLines.Count;
                     taskLines.Add(line);
                 }
                 else
                 {
+                    line.Index = lines.Count;
                     lines.Add(line);
                 }
             }
@@ -405,6 +411,7 @@ public class LinesStream : IDisposable
                             {
                                 var line = new Line(lastPosition, width);
                                 lastPosition = position;
+                                line.Index = taskLines.Count;
                                 taskLines.Add(line);
                             }
 
@@ -588,14 +595,15 @@ public class LinesStream : IDisposable
         }
     }
 
-    public readonly struct Line(long position, int length, LineOptions options = LineOptions.None)
+    public sealed class Line(long position, int length, LineOptions options = LineOptions.None)
     {
         public long Position { get; } = position;
         public int Length { get; } = length;
         public LineOptions Options { get; } = options;
-        public readonly bool IsBroken => Options.HasFlag(LineOptions.Broken);
+        public int Index { get; set; }
+        public bool IsBroken => Options.HasFlag(LineOptions.Broken);
 
-        public override string ToString() => $"{Position} => {Position + Length - 1} ({Length})/{Options}";
+        public override string ToString() => $"{Index}: {Position} => {Position + Length - 1} ({Length})/{Options}";
     }
 
     public enum LineOptions

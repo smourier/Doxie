@@ -85,6 +85,9 @@ public class Settings : Serializable<Settings>
     [DefaultValue(true)]
     public virtual bool MonacoShowMinimap { get => GetPropertyValue(true); set { SetPropertyValue(value); } }
 
+    [DefaultValue(true)]
+    public virtual bool MonacoHighlightHits { get => GetPropertyValue(true); set { SetPropertyValue(value); } }
+
     [DefaultValue(EncodingDetectorMode.AutoDetect)]
     public virtual EncodingDetectorMode EncodingDetectorMode { get => GetPropertyValue(EncodingDetectorMode.AutoDetect); set { SetPropertyValue(value); } }
 
