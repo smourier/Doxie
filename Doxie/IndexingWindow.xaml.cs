@@ -14,15 +14,16 @@ public partial class IndexingWindow : Window
         _directory = directory;
         _autoClose = autoClose;
         InitializeComponent();
+        Title = $"Indexing '{_directory.Path}'";
         _ = Scan();
     }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e) => ConfirmClose(true);
+    private void Cancel_Click(object sender, RoutedEventArgs e) => ConfirmClose(true, true);
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {
-            ConfirmClose(true);
+            ConfirmClose(true, true);
             e.Handled = true;
             return;
         }
@@ -42,8 +43,9 @@ public partial class IndexingWindow : Window
             _completed = true;
             _ = Dispatcher.BeginInvoke(() =>
             {
-                if (_autoClose)
+                if (_autoClose && !_cancelled)
                 {
+                    DialogResult = true;
                     Close();
                     return;
                 }
@@ -67,17 +69,21 @@ public partial class IndexingWindow : Window
 
     private void OnFileIndexing(object? sender, IndexingEventArgs e) => Dispatcher.BeginInvoke(() =>
     {
-        directory.Text = Path.GetDirectoryName(e.FilePath);
+        directory.Text = Path.GetRelativePath(_directory.Path, Path.GetDirectoryName(e.FilePath)!);
         statusText.Text = Path.GetFileName(e.FilePath);
         numberOfDocuments.Text = e.Batch.NumberOfDocuments + " documents";
     });
 
-    private bool ConfirmClose(bool canClose)
+    private bool ConfirmClose(bool canClose, bool cancel)
     {
         if (_completed)
         {
             if (canClose)
             {
+                if (cancel)
+                {
+                    DialogResult = false;
+                }
                 Close();
             }
 
@@ -99,7 +105,7 @@ public partial class IndexingWindow : Window
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
-        if (!ConfirmClose(false))
+        if (!ConfirmClose(false, false))
         {
             e.Cancel = true;
             return;

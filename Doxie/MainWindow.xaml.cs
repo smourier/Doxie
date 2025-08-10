@@ -415,9 +415,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Owner = this
             };
 
-            indexingWindow.ShowDialog();
             OnPropertyChanged(nameof(Index));
             OnDirectoriesSelectionChanged(null!, null!);
+            if (indexingWindow.ShowDialog() == false)
+                return;
         }
 
         MessageBox.Show(this, $"All directories have been processed successfully in {sw.Elapsed}",
