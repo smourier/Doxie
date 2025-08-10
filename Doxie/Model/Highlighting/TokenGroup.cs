@@ -24,12 +24,14 @@ namespace Doxie.Model.Highlighting;
 /// One, or several overlapping tokens, along with the score(s) and the scope of
 /// the original text
 /// </summary>
-public class TokenGroup
+public class TokenGroup(TokenStream tokenStream)
 {
-    private const int MAX_NUM_TOKENS_PER_GROUP = 50;
+    public const int MaxNumTokensPerGroup = 50;
 
-    internal Token[] tokens = new Token[MAX_NUM_TOKENS_PER_GROUP];
-    internal float[] scores = new float[MAX_NUM_TOKENS_PER_GROUP];
+    private readonly Token[] _tokens = new Token[MaxNumTokensPerGroup];
+    private readonly float[] _scores = new float[MaxNumTokensPerGroup];
+    private readonly IOffsetAttribute _offsetAtt = tokenStream.AddAttribute<IOffsetAttribute>(); // LUCENENET: marked readonly
+    private readonly ICharTermAttribute _termAtt = tokenStream.AddAttribute<ICharTermAttribute>(); // LUCENENET: marked readonly
 
     internal int MatchStartOffset { get; set; }
     internal int MatchEndOffset { get; set; }
@@ -54,21 +56,12 @@ public class TokenGroup
     /// </summary>
     public virtual float TotalScore { get; private set; }
 
-    private readonly IOffsetAttribute offsetAtt; // LUCENENET: marked readonly
-    private readonly ICharTermAttribute termAtt; // LUCENENET: marked readonly
-
-    public TokenGroup(TokenStream tokenStream)
-    {
-        offsetAtt = tokenStream.AddAttribute<IOffsetAttribute>();
-        termAtt = tokenStream.AddAttribute<ICharTermAttribute>();
-    }
-
     internal void AddToken(float score)
     {
-        if (NumTokens < MAX_NUM_TOKENS_PER_GROUP)
+        if (NumTokens < MaxNumTokensPerGroup)
         {
-            int termStartOffset = offsetAtt.StartOffset;
-            int termEndOffset = offsetAtt.EndOffset;
+            int termStartOffset = _offsetAtt.StartOffset;
+            int termEndOffset = _offsetAtt.EndOffset;
             if (NumTokens == 0)
             {
                 StartOffset = MatchStartOffset = termStartOffset;
@@ -94,18 +87,16 @@ public class TokenGroup
                     TotalScore += score;
                 }
             }
-            Token token = new Token(termStartOffset, termEndOffset);
-            token.SetEmpty().Append(termAtt);
-            tokens[NumTokens] = token;
-            scores[NumTokens] = score;
+
+            var token = new Token(termStartOffset, termEndOffset);
+            token.SetEmpty().Append(_termAtt);
+            _tokens[NumTokens] = token;
+            _scores[NumTokens] = score;
             NumTokens++;
         }
     }
 
-    internal bool IsDistinct()
-    {
-        return offsetAtt.StartOffset >= EndOffset;
-    }
+    internal bool IsDistinct() => _offsetAtt.StartOffset >= EndOffset;
 
     internal void Clear()
     {
@@ -117,17 +108,11 @@ public class TokenGroup
     /// the "n"th token
     /// </summary>
     /// <param name="index">a value between 0 and numTokens -1</param>
-    public virtual Token GetToken(int index)
-    {
-        return tokens[index];
-    }
+    public virtual Token GetToken(int index) => _tokens[index];
 
     /// <summary>
     /// the "n"th score
     /// </summary>
     /// <param name="index">a value between 0 and numTokens -1</param>
-    public virtual float GetScore(int index)
-    {
-        return scores[index];
-    }
+    public virtual float GetScore(int index) => _scores[index];
 }

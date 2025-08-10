@@ -24,31 +24,22 @@ namespace Doxie.Model.Highlighting;
 /// <see cref="IFragmenter"/> implementation which breaks text up into same-size
 /// fragments with no concerns over spotting sentence boundaries.
 /// </summary>
-public class SimpleFragmenter : IFragmenter
+/// <param name="fragmentSize">size in number of characters of each fragment</param>
+public class SimpleFragmenter(int fragmentSize) : IFragmenter
 {
-    private const int DEFAULT_FRAGMENT_SIZE = 100;
-    private int currentNumFrags;
-    private int fragmentSize;
-    private IOffsetAttribute offsetAtt;
+    public const int DefaultFragmentSize = 100;
+    private int _currentNumFrags;
+    private IOffsetAttribute? _offsetAtt;
 
-    public SimpleFragmenter() : this(DEFAULT_FRAGMENT_SIZE) { }
-
-    /// <param name="fragmentSize">size in number of characters of each fragment</param>
-    public SimpleFragmenter(int fragmentSize)
-    {
-        // LUCENENET NOTE: Must not set the property directly
-        // in case the user decides to override it and produce an excepetion.
-        // Therefore, an auto-implemented property is unacceptable.
-        this.fragmentSize = fragmentSize;
-    }
+    public SimpleFragmenter() : this(DefaultFragmentSize) { }
 
     /// <summary>
     /// <seealso cref="IFragmenter.Start(string, TokenStream)"/>
     /// </summary>
     public virtual void Start(string originalText, TokenStream stream)
     {
-        offsetAtt = stream.AddAttribute<IOffsetAttribute>();
-        currentNumFrags = 1;
+        _offsetAtt = stream.AddAttribute<IOffsetAttribute>();
+        _currentNumFrags = 1;
     }
 
     /// <summary>
@@ -56,10 +47,13 @@ public class SimpleFragmenter : IFragmenter
     /// </summary>
     public virtual bool IsNewFragment()
     {
-        bool isNewFrag = offsetAtt.EndOffset >= FragmentSize * currentNumFrags;
+        if (_offsetAtt == null)
+            throw new InvalidOperationException("Start must be called before IsNewFragment");
+
+        var isNewFrag = _offsetAtt.EndOffset >= FragmentSize * _currentNumFrags;
         if (isNewFrag)
         {
-            currentNumFrags++;
+            _currentNumFrags++;
         }
         return isNewFrag;
     }
@@ -67,9 +61,5 @@ public class SimpleFragmenter : IFragmenter
     /// <summary>
     /// Gets or Sets size in number of characters of each fragment
     /// </summary>
-    public virtual int FragmentSize
-    {
-        get => fragmentSize;
-        set => fragmentSize = value;
-    }
+    public virtual int FragmentSize { get; set; } = fragmentSize;
 }
