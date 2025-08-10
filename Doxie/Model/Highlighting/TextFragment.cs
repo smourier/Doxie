@@ -25,7 +25,7 @@ public class TextFragment(StringBuilder markedUpText, int textStartPos, int frag
 {
     private readonly StringBuilder _markedUpText = markedUpText ?? throw new ArgumentNullException(nameof(markedUpText));
 
-    public virtual float Score { get; protected internal set; }
+    public float Score { get; internal set; }
     public int TextEndPos { get; internal set; }
     public int TextStartPos { get; internal set; } = textStartPos;
 

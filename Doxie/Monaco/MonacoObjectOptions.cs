@@ -1,7 +1,7 @@
 ﻿namespace Doxie.Monaco;
 
 #pragma warning disable IDE1006 // Naming Styles
-public class EditorControlObjectOptions
+public class MonacoObjectOptions
 {
     public bool automaticLayout { get; set; } = true;
     public string? language { get; set; } // = "plaintext";

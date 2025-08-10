@@ -1,6 +1,6 @@
 ﻿namespace Doxie.Monaco;
 
-public class EditorControlEventArgs(EditorControlEventType type, string? json = null) : HandledEventArgs
+public class MonacoEventArgs(MonacoEventType type, string? json = null) : HandledEventArgs
 {
     private readonly Lazy<JsonDocument?> _document = new(() =>
     {
@@ -10,7 +10,7 @@ public class EditorControlEventArgs(EditorControlEventType type, string? json = 
         return JsonSerializer.Deserialize<JsonDocument>(json);
     });
 
-    public EditorControlEventType EventType { get; } = type;
+    public MonacoEventType EventType { get; } = type;
     public string? Json { get; } = json;
     public JsonDocument? Document => _document.Value;
     public JsonElement RootElement => (Document?.RootElement).GetValueOrDefault();

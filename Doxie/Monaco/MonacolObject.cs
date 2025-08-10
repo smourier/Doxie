@@ -3,10 +3,10 @@
 #pragma warning disable IDE1006 // Naming Styles
 
 [ComVisible(true)]
-public partial class EditorControlObject
+public partial class MonacolObject
 {
-    public event EventHandler<EditorControlLoadEventArgs>? Load;
-    public event EventHandler<EditorControlEventArgs>? Event;
+    public event EventHandler<MonacoLoadEventArgs>? Load;
+    public event EventHandler<MonacoEventArgs>? Event;
 
     public object getOptions() => JsonSerializer.Serialize(new
     {
@@ -23,7 +23,7 @@ public partial class EditorControlObject
     {
         try
         {
-            var e = new EditorControlLoadEventArgs();
+            var e = new MonacoLoadEventArgs();
             Load?.Invoke(this, e);
             return e.DocumentText;
         }
@@ -34,7 +34,7 @@ public partial class EditorControlObject
         }
     }
 
-    public void onEvent(EditorControlEventType type, string? json = null)
+    public void onEvent(MonacoEventType type, string? json = null)
     {
         var handler = Event;
         if (handler == null)
@@ -44,9 +44,9 @@ public partial class EditorControlObject
         {
             var e = type switch
             {
-                EditorControlEventType.KeyDown or EditorControlEventType.KeyUp => new EditorControlKeyEventArgs(type, json),
-                EditorControlEventType.ConfigurationChanged => new EditorControlConfigurationChangedEventArgs(json),
-                _ => new EditorControlEventArgs(type, json),
+                MonacoEventType.KeyDown or MonacoEventType.KeyUp => new MonacoKeyEventArgs(type, json),
+                MonacoEventType.ConfigurationChanged => new MonacoConfigurationChangedEventArgs(json),
+                _ => new MonacoEventArgs(type, json),
             };
             handler?.Invoke(this, e);
         }

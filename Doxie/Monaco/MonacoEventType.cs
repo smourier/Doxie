@@ -1,6 +1,6 @@
 ﻿namespace Doxie.Monaco;
 
-public enum EditorControlEventType
+public enum MonacoEventType
 {
     Unknown = 0,
     Load = 1,

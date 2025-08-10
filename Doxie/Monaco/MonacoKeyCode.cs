@@ -1,7 +1,7 @@
 ﻿namespace Doxie.Monaco;
 
 // from https://github.com/microsoft/vscode/blob/main/src/vs/monaco.d.ts
-public enum KeyCode
+public enum MonacoKeyCode
 {
     DependsOnKbLayout = -1,
     /**

@@ -38,9 +38,17 @@ public class Highlighter(IScorer fragmentScorer)
     /// Low level api to get the most relevant (formatted) sections of the document.
     /// This method has been made public to allow visibility of score information held in <see cref="TextFragment"/> objects.
     /// Thanks to Jason Calabrese for help in redefining the interface.
+    /// 
+    /// Simon Mourier modified it with the following changes:
+    /// * only return the text fragments that have a score > 0
+    /// * don't use encoder nor formatter, just return the raw text fragments
+    /// * build stream token ourselves
+    /// * default max chars to analyze is now int.MaxValue, not 50 * 1024
+    /// * removed the max number of fragments to return, now return all fragments
+    /// * removed the priority queue thing and merge feature which posed perf problems to achieve previous point
+    /// * removed other methods of this class that where all based on this one and can be rewritten easily using linq
+    /// note: ideally, this method should return a real IEnumerable of TextFragment instead of a list
     /// </summary>
-    /// <exception cref="IOException">If there is a low-level I/O error</exception>
-    /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
     public IReadOnlyList<TextFragment> GetBestTextFragments(Analyzer analyzer, string field, string text)
     {
         ArgumentNullException.ThrowIfNull(analyzer);
@@ -70,7 +78,6 @@ public class Highlighter(IScorer fragmentScorer)
         try
         {
             FragmentScorer.StartFragment(currentFrag);
-            docFrags.Add(currentFrag);
 
             string tokenText;
             int startOffset;
@@ -106,11 +113,15 @@ public class Highlighter(IScorer fragmentScorer)
                     if (TextFragmenter.IsNewFragment())
                     {
                         currentFrag.Score = FragmentScorer.FragmentScore;
+                        if (currentFrag.Score > 0)
+                        {
+                            docFrags.Add(currentFrag);
+                        }
+
                         //record stats for a new fragment
                         currentFrag.TextEndPos = newText.Length;
                         currentFrag = new TextFragment(newText, newText.Length, docFrags.Count);
                         FragmentScorer.StartFragment(currentFrag);
-                        docFrags.Add(currentFrag);
                     }
                 }
 
@@ -118,6 +129,11 @@ public class Highlighter(IScorer fragmentScorer)
             }
 
             currentFrag.Score = FragmentScorer.FragmentScore;
+            if (currentFrag.Score > 0)
+            {
+                docFrags.Add(currentFrag);
+            }
+
             if (tokenGroup.NumTokens > 0)
             {
                 //flush the accumulated text (same code as in above loop)
@@ -142,7 +158,6 @@ public class Highlighter(IScorer fragmentScorer)
             }
 
             currentFrag.TextEndPos = newText.Length;
-            docFrags.Add(currentFrag);
             return docFrags;
         }
         finally

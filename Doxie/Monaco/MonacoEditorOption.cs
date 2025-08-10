@@ -1,7 +1,7 @@
 ﻿namespace Doxie.Monaco;
 
 // **warning** this MUST be in sync with the current Monaco build
-public enum EditorOption
+public enum MonacoEditorOption
 {
     acceptSuggestionOnCommitCharacter = 0,
     acceptSuggestionOnEnter = 1,

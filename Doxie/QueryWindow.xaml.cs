@@ -8,7 +8,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private IndexSearchResultItem? _item;
     private int _totalHits;
     private readonly Task _webView2Initialized;
-    private readonly EditorControlObject _eco = new();
+    private readonly MonacolObject _eco = new();
     private LinesStream? _stream;
     private int _currentStreamLineIndex = 0;
     private int _linesCount;
@@ -259,15 +259,13 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             {
                 // re-reading the whole for hightlighting is (probably) faster than using the stream
                 var text = File.ReadAllText(item.Path, encoding);
-                var list = Index.Highlight(Query, text);
+                var fragments = Index.GetFragmentsToHighlight(Query, text);
 
                 var ranges = new List<MonacoRange>();
-                foreach (var range in list)
+                foreach (var range in fragments)
                 {
-                    if (range.IsEmpty)
-                        continue;
-
-                    var lines = _stream.GetLines(range.StartOffset, range.Length).ToArray();
+                    //_stream.GetLines
+                    //var lines = _stream.GetLines(range.StartOffset, range.Length).ToArray();
                 }
 
                 if (ranges.Count > 0)
@@ -286,7 +284,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void EditorControlOnLoad(object? sender, EditorControlLoadEventArgs e)
+    private void EditorControlOnLoad(object? sender, MonacoLoadEventArgs e)
     {
         if (_stream == null || _stream.Lines.Count == 0)
         {
@@ -312,7 +310,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private Task<string> EnableMinimap(bool enabled) => webView.ExecuteScriptAsync("editor.updateOptions({minimap:{enabled:" + enabled.ToString().ToLowerInvariant() + "}})");
     private Task<string> SetEditorTheme(string? theme = null) { theme = theme.Nullify() ?? "vs-dark"; return webView.ExecuteScriptAsync($"monaco.editor.setTheme('{theme}')"); }
     private async Task<string> FocusEditor() { var result = await webView.ExecuteScriptAsync("editor.focus()"); webView.Focus(); return result; }
-    private Task<string> SetEditorLanguage(string? lang) => webView.ExecuteScriptAsync($"monaco.editor.setModelLanguage(editor.getModel(), '{lang.Nullify() ?? LanguageExtensionPoint.DefaultLanguageId}');");
+    private Task<string> SetEditorLanguage(string? lang) => webView.ExecuteScriptAsync($"monaco.editor.setModelLanguage(editor.getModel(), '{lang.Nullify() ?? MonacoLanguageExtensionPoint.DefaultLanguageId}');");
     private Task<string> SetEditorPosition(int lineNumber = 0, int column = 0) => webView.ExecuteScriptAsync("editor.setPosition({lineNumber:" + lineNumber + ",column:" + column + "})");
     private Task<string> MoveEditorTo(int? line = null, int? column = null) => webView.ExecuteScriptAsync($"moveEditorTo({column}, {line})");
     private Task<string> HighlightRanges(IEnumerable<MonacoRange> ranges)
@@ -345,11 +343,11 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private async void EditorControlEvent(object? sender, EditorControlEventArgs e)
+    private async void EditorControlEvent(object? sender, MonacoEventArgs e)
     {
         switch (e.EventType)
         {
-            case EditorControlEventType.EditorCreated:
+            case MonacoEventType.EditorCreated:
                 if (!MonacoExtensions.LanguagesLoaded)
                 {
                     await MonacoExtensions.LoadLanguages(webView);

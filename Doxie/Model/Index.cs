@@ -451,33 +451,26 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public IReadOnlyList<IndexFragment> Highlight(string query, string originalText)
+    public virtual IReadOnlyList<TextFragment> GetFragmentsToHighlight(string query, string originalText)
     {
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(originalText);
 
-        var f = DefaultFieldName;
+        const string field = "whatever";
         var analyzer = new StandardAnalyzer(LuceneVersion.LUCENE_48);
-        var parser = new QueryParser(LuceneVersion.LUCENE_48, f, analyzer) { AllowLeadingWildcard = true, };
+        var parser = new QueryParser(LuceneVersion.LUCENE_48, field, analyzer) { AllowLeadingWildcard = true, };
         var qry = parser.Parse(query);
-        var scorer = new QueryScorer(qry, f);
+        var scorer = new QueryScorer(qry, field);
 
         // note: the lucene highlighter has been modified to work better and faster in our context
         var highlighter = new Highlighter(scorer) { TextFragmenter = new SimpleFragmenter(0) };
 
-        var sw = Stopwatch.StartNew();
-        var fragments = highlighter.GetBestTextFragments(analyzer, f, originalText);
-        var texts = fragments.Where(f => f.Score > 0).Select(frag => frag?.ToString() ?? string.Empty).ToArray();
-        EventProvider.Default.WriteMessage("sw: " + sw.Elapsed + " count:" + texts.Length);
-        sw.Restart();
-
-        var list = new List<IndexFragment>();
-        foreach (var fragment in fragments.Where(f => f.Score > 0))
-        {
-            list.Add(new IndexFragment(fragment.TextStartPos, fragment.TextEndPos));
-        }
-
-        return list;
+        //var sw = Stopwatch.StartNew();
+        var fragments = highlighter.GetBestTextFragments(analyzer, field, originalText);
+        //var texts = fragments.Where(f => f.Score > 0).Select(frag => frag?.ToString() ?? string.Empty).ToArray();
+        //EventProvider.Default.WriteMessage("sw: " + sw.Elapsed + " count:" + texts.Length);
+        //sw.Restart();
+        return fragments;
     }
 
     private static SearchResultItem CreateItemFunc(Index index, int docIndex, ScoreDoc scoreDoc, Document doc) => new() { Index = docIndex, Score = scoreDoc.Score, DocumentId = scoreDoc.Doc, Document = doc };

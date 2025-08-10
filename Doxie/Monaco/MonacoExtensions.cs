@@ -4,8 +4,8 @@ public static class MonacoExtensions
 {
     public static bool LanguagesLoaded { get; private set; }
 
-    private static readonly ConcurrentDictionary<string, LanguageExtensionPoint> _languagesById = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, IReadOnlyList<LanguageExtensionPoint>> _languagesByExtension = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, MonacoLanguageExtensionPoint> _languagesById = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, IReadOnlyList<MonacoLanguageExtensionPoint>> _languagesByExtension = new(StringComparer.OrdinalIgnoreCase);
     private static readonly JsonSerializerOptions _options = new() { PropertyNameCaseInsensitive = true };
     private static bool _loadingLanguages;
 
@@ -28,7 +28,7 @@ public static class MonacoExtensions
         _loadingLanguages = true;
 
         var json = await webView.ExecuteScriptAsync("monaco.languages.getLanguages()");
-        var languages = JsonSerializer.Deserialize<LanguageExtensionPoint[]>(json, _options);
+        var languages = JsonSerializer.Deserialize<MonacoLanguageExtensionPoint[]>(json, _options);
         if (languages != null)
         {
             foreach (var language in languages)
@@ -43,11 +43,11 @@ public static class MonacoExtensions
                     {
                         if (!_languagesByExtension.TryGetValue(ext, out var list))
                         {
-                            var l = new List<LanguageExtensionPoint>();
+                            var l = new List<MonacoLanguageExtensionPoint>();
                             list = l;
                             _languagesByExtension[ext] = list;
                         }
-                        ((List<LanguageExtensionPoint>)list).Add(language);
+                        ((List<MonacoLanguageExtensionPoint>)list).Add(language);
                     }
                 }
             }
@@ -103,7 +103,7 @@ public static class MonacoExtensions
         return null;
     }
 
-    public static IDictionary<string, IReadOnlyList<LanguageExtensionPoint>> GetLanguagesByExtension()
+    public static IDictionary<string, IReadOnlyList<MonacoLanguageExtensionPoint>> GetLanguagesByExtension()
     {
         if (!LanguagesLoaded)
             throw new InvalidOperationException();
@@ -111,7 +111,7 @@ public static class MonacoExtensions
         return _languagesByExtension;
     }
 
-    public static IDictionary<string, LanguageExtensionPoint> GetLanguages()
+    public static IDictionary<string, MonacoLanguageExtensionPoint> GetLanguages()
     {
         if (!LanguagesLoaded)
             throw new InvalidOperationException();
@@ -122,7 +122,7 @@ public static class MonacoExtensions
     public static string? GetLanguageByExtension(string ext)
     {
         if (string.IsNullOrWhiteSpace(ext) || !LanguagesLoaded)
-            return LanguageExtensionPoint.DefaultLanguageId;
+            return MonacoLanguageExtensionPoint.DefaultLanguageId;
 
         if (_languagesByExtension.TryGetValue(ext, out var langs) && langs.Count > 0)
             return langs[0].Id;
@@ -140,7 +140,7 @@ public static class MonacoExtensions
             }
         }
 
-        return LanguageExtensionPoint.DefaultLanguageId;
+        return MonacoLanguageExtensionPoint.DefaultLanguageId;
     }
 
     public static bool IsUnknownLanguageExtension(string? ext)
