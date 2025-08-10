@@ -73,7 +73,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Key == Key.F8)
+        if (e.Key == Key.F4)
         {
             var lastRecent = Settings.Current.RecentFiles.FirstOrDefault()?.FilePath;
             if (lastRecent != null)

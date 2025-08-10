@@ -120,21 +120,34 @@
             Background="#52432d" />
 
         <Grid
-            x:Name="source"
             Grid.Row="3"
-            Grid.ColumnSpan="2">
+            Grid.ColumnSpan="2"
+            Visibility="{Binding IsSourceVisible, Converter={StaticResource BoolToVis}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <TextBlock
-                Margin="5,5,0,0"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                FontSize="16"
-                Foreground="#E89644"
-                Text="{Binding Item.Name, StringFormat={}\'{0}\' Source}" />
+            <StackPanel Margin="5" Orientation="Horizontal">
+                <TextBlock
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="16"
+                    Foreground="#E89644"
+                    Text="{Binding Item.Name, StringFormat={}\'{0}\' Source}" />
+                <Button
+                    x:Name="nextHit"
+                    Margin="5,0,0,0"
+                    Click="NextHit_Click">
+                    Next Hit
+                </Button>
+                <Button
+                    x:Name="previousHit"
+                    Margin="5,0,0,0"
+                    Click="PreviousHit_Click">
+                    Previous Hit
+                </Button>
+            </StackPanel>
 
             <Wpf:WebView2
                 x:Name="webView"

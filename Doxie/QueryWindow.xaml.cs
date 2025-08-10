@@ -9,12 +9,15 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private int _totalHits;
     private readonly Task _webView2Initialized;
     private readonly MonacolObject _eco = new();
+    private List<MonacoRange>? _highlightedRanges;
+    private int _highlightedRangesIndex = -1;
     private LinesStream? _stream;
-    private int _currentStreamLineIndex = 0;
+    private int _currentStreamLineIndex;
     private int _linesCount;
     private bool _isLinesCountVisible;
     private bool _isDetectedLanguageVisible;
     private bool _isHitsVisible = true;
+    private bool _isHighlightedRangesVisible;
     private int _hitsCount;
     private string? _modelLanguageName;
     private Encoding? _detectedEncoding;
@@ -28,7 +31,6 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         _eco.Event += EditorControlEvent;
 
         InitializeComponent();
-        webView.Visibility = Visibility.Hidden;
         webView.CoreWebView2InitializationCompleted += CoreWebView2InitializationCompleted;
         _webView2Initialized = webView.EnsureCoreWebView2Async();
         DataContext = this;
@@ -79,6 +81,19 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                 return;
 
             _detectedEncoding = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsHighlightedRangesVisible
+    {
+        get => _isHighlightedRangesVisible;
+        set
+        {
+            if (_isHighlightedRangesVisible == value)
+                return;
+
+            _isHighlightedRangesVisible = value;
             OnPropertyChanged();
         }
     }
@@ -149,6 +164,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         }
     }
 
+    public bool IsSourceVisible => Item != null && Item.Path != null && IOUtilities.PathIsFile(Item.Path);
     public IndexSearchResultItem? Item
     {
         get => _item;
@@ -164,6 +180,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
             _item = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSourceVisible));
         }
     }
 
@@ -240,12 +257,10 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
         if (filesList.SelectedItem is not IndexSearchResultItem item || item.Path == null || !IOUtilities.PathIsFile(item.Path))
         {
-            webView.Visibility = Visibility.Hidden;
             Item = null;
             return;
         }
 
-        webView.Visibility = Visibility.Visible;
         Item = item;
         _ = LoadFile(item);
     }
@@ -271,6 +286,8 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             _stream?.Dispose();
             IsLinesCountVisible = false;
             IsHitsVisible = false;
+            IsHighlightedRangesVisible = false;
+            _highlightedRanges = null;
             _currentStreamLineIndex = 0;
             _stream = new LinesStream(item.Path, encoding);
             _stream.Loaded += (s, e) =>
@@ -311,6 +328,8 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
                 if (ranges.Count > 0)
                 {
+                    _highlightedRanges = ranges;
+                    IsHighlightedRangesVisible = true;
                     HitsCount = ranges.Count;
                     await HighlightRanges(ranges);
                 }
@@ -355,11 +374,19 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private async Task<string> FocusEditor() { var result = await webView.ExecuteScriptAsync("editor.focus()"); webView.Focus(); return result; }
     private Task<string> SetEditorLanguage(string? lang) => webView.ExecuteScriptAsync($"monaco.editor.setModelLanguage(editor.getModel(), '{lang.Nullify() ?? MonacoLanguageExtensionPoint.DefaultLanguageId}');");
     private Task<string> SetEditorPosition(int lineNumber = 0, int column = 0) => webView.ExecuteScriptAsync("editor.setPosition({lineNumber:" + lineNumber + ",column:" + column + "})");
+    private Task<string> RevealLineInCenter(int lineNumber = 0) => webView.ExecuteScriptAsync($"editor.revealLineInCenter({lineNumber})");
     private Task<string> MoveEditorTo(int? line = null, int? column = null) => webView.ExecuteScriptAsync($"moveEditorTo({column}, {line})");
     private Task<string> HighlightRanges(IEnumerable<MonacoRange> ranges)
     {
         var json = JsonSerializer.Serialize(ranges, MonacoExtensions.SerializerOptions);
         return webView.ExecuteScriptAsync($"highlightRanges('{json}')");
+    }
+
+    private Task<string> SetSelection(int lineNumber) => webView.ExecuteScriptAsync($"var len=editor.getModel().getLineLength({lineNumber});editor.setSelection(new monaco.Range({lineNumber},1,{lineNumber},len+1))");
+    private Task<string> SetSelection(MonacoRange range)
+    {
+        ArgumentNullException.ThrowIfNull(range);
+        return webView.ExecuteScriptAsync($"editor.setSelection(new monaco.Range({range.StartLineNumber},{range.StartColumn},{range.EndLineNumber},{range.EndColumn}))");
     }
 
     private async Task SetLanguage(IndexSearchResultItem item)
@@ -417,5 +444,41 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             return;
 
         Extensions.OpenInExplorer(item.Path);
+    }
+
+    private async Task GoToHighlightedRange()
+    {
+        var range = _highlightedRanges![_highlightedRangesIndex];
+        await RevealLineInCenter(range.StartLineNumber);
+        await MoveEditorTo(range.StartLineNumber, range.StartColumn);
+        await SetSelection(range.StartLineNumber);
+    }
+
+    private void NextHit_Click(object sender, RoutedEventArgs e)
+    {
+        if (_highlightedRanges == null || _highlightedRanges.Count == 0)
+            return;
+
+        var newIndex = _highlightedRangesIndex + 1;
+        if (newIndex >= _highlightedRanges.Count)
+        {
+            newIndex = 0; // wrap around to the first hit
+        }
+        _highlightedRangesIndex = newIndex;
+        _ = GoToHighlightedRange();
+    }
+
+    private void PreviousHit_Click(object sender, RoutedEventArgs e)
+    {
+        if (_highlightedRanges == null || _highlightedRanges.Count == 0)
+            return;
+
+        var newIndex = _highlightedRangesIndex - 1;
+        if (newIndex < 0)
+        {
+            newIndex = _highlightedRanges.Count - 1; // wrap around to the last hit
+        }
+        _highlightedRangesIndex = newIndex;
+        _ = GoToHighlightedRange();
     }
 }
