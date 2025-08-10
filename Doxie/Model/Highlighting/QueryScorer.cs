@@ -225,10 +225,9 @@ public class QueryScorer : IScorer
         {
             _fieldWeightedSpanTerms = qse.GetWeightedSpanTermsWithScores(_query, tokenStream, _field, _reader);
         }
+
         if (qse.IsCachedTokenStream)
-        {
             return qse.TokenStream;
-        }
 
         return null;
     }
@@ -250,6 +249,5 @@ public class QueryScorer : IScorer
     /// false.
     /// </summary>
     public virtual void SetWrapIfNotCachingTokenFilter(bool wrap) => _wrapToCaching = wrap;
-
     public virtual void SetMaxDocCharsToAnalyze(int maxDocCharsToAnalyze) => _maxCharsToAnalyze = maxDocCharsToAnalyze;
 }

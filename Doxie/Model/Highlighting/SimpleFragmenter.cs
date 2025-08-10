@@ -31,7 +31,10 @@ public class SimpleFragmenter(int fragmentSize) : IFragmenter
     private int _currentNumFrags;
     private IOffsetAttribute? _offsetAtt;
 
-    public SimpleFragmenter() : this(DefaultFragmentSize) { }
+    public SimpleFragmenter()
+        : this(DefaultFragmentSize)
+    {
+    }
 
     /// <summary>
     /// <seealso cref="IFragmenter.Start(string, TokenStream)"/>

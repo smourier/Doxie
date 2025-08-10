@@ -37,46 +37,6 @@ public class Highlighter(IScorer fragmentScorer)
     public virtual IScorer FragmentScorer { get; set; } = fragmentScorer;
 
     /// <summary>
-    /// Highlights chosen terms in a text, extracting the most relevant section.
-    /// This is a convenience method that calls <see cref="GetBestFragment(TokenStream, string)"/>
-    /// </summary>
-    /// <param name="analyzer">the analyzer that will be used to split <paramref name="text"/> into chunks</param>
-    /// <param name="fieldName">Name of field used to influence analyzer's tokenization policy</param>
-    /// <param name="text">text to highlight terms in</param>
-    /// <returns>highlighted text fragment or null if no terms found</returns>
-    /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
-    public string? GetBestFragment(Analyzer analyzer, string fieldName, string text)
-    {
-        var tokenStream = analyzer.GetTokenStream(fieldName, text);
-        return GetBestFragment(tokenStream, text);
-    }
-
-    /// <summary>
-    /// Highlights chosen terms in a text, extracting the most relevant section.
-    /// The document text is analysed in chunks to record hit statistics
-    /// across the document. After accumulating stats, the fragment with the highest score
-    /// is returned
-    /// </summary>
-    /// <param name="tokenStream">
-    /// A stream of tokens identified in the text parameter, including offset information.
-    /// This is typically produced by an analyzer re-parsing a document's
-    /// text. Some work may be done on retrieving TokenStreams more efficiently
-    /// by adding support for storing original text position data in the Lucene
-    /// index but this support is not currently available (as of Lucene 1.4 rc2).
-    /// </param>
-    /// <param name="text">text to highlight terms in</param>
-    /// <returns>highlighted text fragment or null if no terms found</returns>
-    /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
-    public string? GetBestFragment(TokenStream tokenStream, string text)
-    {
-        var results = GetBestFragments(tokenStream, text, 1);
-        if (results.Length > 0)
-            return results[0];
-
-        return null;
-    }
-
-    /// <summary>
     /// Highlights chosen terms in a text, extracting the most relevant sections.
     /// This is a convenience method that calls <see cref="GetBestFragments(TokenStream, string, int)"/>
     /// </summary>
@@ -86,11 +46,7 @@ public class Highlighter(IScorer fragmentScorer)
     /// <param name="maxNumFragments">the maximum number of fragments.</param>
     /// <returns>highlighted text fragments (between 0 and <paramref name="maxNumFragments"/> number of fragments)</returns>
     /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
-    public string[] GetBestFragments(
-        Analyzer analyzer,
-        string fieldName,
-        string text,
-        int maxNumFragments)
+    public string[] GetBestFragments(Analyzer analyzer, string fieldName, string text, int maxNumFragments)
     {
         var tokenStream = analyzer.GetTokenStream(fieldName, text);
         return GetBestFragments(tokenStream, text, maxNumFragments);
@@ -133,15 +89,10 @@ public class Highlighter(IScorer fragmentScorer)
     /// </summary>
     /// <exception cref="IOException">If there is a low-level I/O error</exception>
     /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
-    public TextFragment[] GetBestTextFragments(
-        TokenStream tokenStream,
-        string text,
-        bool mergeContiguousFragments,
-        int maxNumFragments)
+    public TextFragment[] GetBestTextFragments(TokenStream tokenStream, string text, bool mergeContiguousFragments, int maxNumFragments)
     {
         var docFrags = new JCG.List<TextFragment>();
         var newText = new StringBuilder();
-
         var termAtt = tokenStream.AddAttribute<ICharTermAttribute>();
         var offsetAtt = tokenStream.AddAttribute<IOffsetAttribute>();
         tokenStream.Reset();
@@ -157,6 +108,7 @@ public class Highlighter(IScorer fragmentScorer)
         {
             tokenStream = newStream;
         }
+
         FragmentScorer.StartFragment(currentFrag);
         docFrags.Add(currentFrag);
 
@@ -172,9 +124,7 @@ public class Highlighter(IScorer fragmentScorer)
 
             var tokenGroup = new TokenGroup(tokenStream);
 
-            for (var next = tokenStream.IncrementToken();
-                 next && offsetAtt.StartOffset < MaxDocCharsToAnalyze;
-                 next = tokenStream.IncrementToken())
+            for (var next = tokenStream.IncrementToken(); next && offsetAtt.StartOffset < MaxDocCharsToAnalyze; next = tokenStream.IncrementToken())
             {
                 if (offsetAtt.EndOffset > text.Length || offsetAtt.StartOffset > text.Length)
                     throw new Exception("Token " + termAtt.ToString() + " exceeds length of provided text sized " + text.Length);
@@ -210,8 +160,8 @@ public class Highlighter(IScorer fragmentScorer)
 
                 tokenGroup.AddToken(FragmentScorer.GetTokenScore());
             }
-            currentFrag.Score = FragmentScorer.FragmentScore;
 
+            currentFrag.Score = FragmentScorer.FragmentScore;
             if (tokenGroup.NumTokens > 0)
             {
                 //flush the accumulated text (same code as in above loop)
@@ -389,11 +339,7 @@ public class Highlighter(IScorer fragmentScorer)
     /// <param name="separator">the separator used to intersperse the document fragments (typically "...")</param>
     /// <returns>highlighted text</returns>
     /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
-    public virtual string GetBestFragments(
-        TokenStream tokenStream,
-        string text,
-        int maxNumFragments,
-        string separator)
+    public virtual string GetBestFragments(TokenStream tokenStream, string text, int maxNumFragments, string separator)
     {
         var sections = GetBestFragments(tokenStream, text, maxNumFragments);
         var result = new StringBuilder();
@@ -414,8 +360,8 @@ public class Highlighter(IScorer fragmentScorer)
         {
             if (fragA.Score == fragB.Score)
                 return fragA.FragNum > fragB.FragNum;
-            else
-                return fragA.Score < fragB.Score;
+
+            return fragA.Score < fragB.Score;
         }
     }
 }

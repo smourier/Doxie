@@ -63,8 +63,7 @@ public class WeightedSpanTermExtractor
     {
         if (query is BooleanQuery booleanQuery)
         {
-            IList<BooleanClause> queryClauses = booleanQuery.Clauses;
-
+            var queryClauses = booleanQuery.Clauses;
             for (var i = 0; i < queryClauses.Count; i++)
             {
                 if (!queryClauses[i].IsProhibited)
@@ -98,8 +97,10 @@ public class WeightedSpanTermExtractor
                     {
                         largestInc = inc;
                     }
+
                     lastPos = pos;
                 }
+
                 if (largestInc > 1)
                 {
                     slop += largestInc;
@@ -107,11 +108,7 @@ public class WeightedSpanTermExtractor
             }
 
             var inorder = slop == 0;
-
-            var sp = new SpanNearQuery(clauses, slop, inorder)
-            {
-                Boost = query.Boost
-            };
+            var sp = new SpanNearQuery(clauses, slop, inorder) { Boost = query.Boost };
             ExtractWeightedSpanTerms(terms, sp);
         }
         else if (query is TermQuery)
@@ -168,7 +165,7 @@ public class WeightedSpanTermExtractor
                 for (var i = 0; i < termArrays.Count; ++i)
                 {
                     var termArray = termArrays[i];
-                    JCG.List<SpanQuery> disjuncts = disjunctLists[positions[i]];
+                    var disjuncts = disjunctLists[positions[i]];
                     if (disjuncts is null)
                     {
                         disjuncts = disjunctLists[positions[i]] = new JCG.List<SpanQuery>(termArray.Length);
@@ -230,8 +227,7 @@ public class WeightedSpanTermExtractor
         ExtractUnknownQuery(query, terms);
     }
 
-    protected virtual void ExtractUnknownQuery(Query query,
-        IDictionary<string, WeightedSpanTerm> terms)
+    protected virtual void ExtractUnknownQuery(Query query, IDictionary<string, WeightedSpanTerm> terms)
     {
         // for sub-classing to extract custom queries
     }
@@ -253,11 +249,9 @@ public class WeightedSpanTermExtractor
         }
         else
         {
-            fieldNames =
-            [
-                _fieldName
-            ];
+            fieldNames = [_fieldName];
         }
+
         // To support the use of the default field name
         if (_defaultField != null)
         {
@@ -265,7 +259,6 @@ public class WeightedSpanTermExtractor
         }
 
         var queries = new JCG.Dictionary<string, SpanQuery>();
-
         var nonWeightedTerms = new JCG.HashSet<Term>();
         var mustRewriteQuery = MustRewriteQuery(spanQuery);
         if (mustRewriteQuery)
@@ -384,6 +377,7 @@ public class WeightedSpanTermExtractor
             indexer.AddField(DelegatingAtomicReader.FieldName, _tokenStream);
             _tokenStream.Reset();
             var searcher = indexer.CreateSearcher();
+
             // MEM index has only atomic ctx
             var reader = ((AtomicReaderContext)searcher.TopReaderContext).AtomicReader;
             _internalReader = new DelegatingAtomicReader(reader);
@@ -486,6 +480,7 @@ public class WeightedSpanTermExtractor
             {
                 terms.TryGetValue(wt, out WeightedSpanTerm weightedSpanTerm);
                 var docFreq = reader.DocFreq(new Term(fieldName, weightedSpanTerm.Term));
+
                 // IDF algorithm taken from DefaultSimilarity class
                 var idf = (float)(Math.Log(totalNumDocs / (double)(docFreq + 1)) + 1.0);
                 weightedSpanTerm.Weight *= idf;
@@ -511,7 +506,7 @@ public class WeightedSpanTermExtractor
         }
         else if (spanQuery is SpanNearQuery spanNearQuery)
         {
-            foreach (SpanQuery clause in spanNearQuery.GetClauses())
+            foreach (var clause in spanNearQuery.GetClauses())
             {
                 CollectSpanQueryFields(clause, fieldNames);
             }
@@ -522,7 +517,7 @@ public class WeightedSpanTermExtractor
         }
         else if (spanQuery is SpanOrQuery spanOrQuery)
         {
-            foreach (SpanQuery clause in spanOrQuery.GetClauses())
+            foreach (var clause in spanOrQuery.GetClauses())
             {
                 CollectSpanQueryFields(clause, fieldNames);
             }
@@ -546,12 +541,10 @@ public class WeightedSpanTermExtractor
 
         if (spanQuery is SpanNearQuery spanNearQuery)
         {
-            foreach (SpanQuery clause in spanNearQuery.GetClauses())
+            foreach (var clause in spanNearQuery.GetClauses())
             {
                 if (MustRewriteQuery(clause))
-                {
                     return true;
-                }
             }
             return false;
         }
@@ -561,12 +554,10 @@ public class WeightedSpanTermExtractor
 
         if (spanQuery is SpanOrQuery spanOrQuery)
         {
-            foreach (SpanQuery clause in spanOrQuery.GetClauses())
+            foreach (var clause in spanOrQuery.GetClauses())
             {
                 if (MustRewriteQuery(clause))
-                {
                     return true;
-                }
             }
             return false;
         }
@@ -598,7 +589,8 @@ public class WeightedSpanTermExtractor
                 _wrapped.TryGetValue(key, out var prev);
                 _wrapped[key] = value;
 
-                if (prev is null) return;
+                if (prev is null)
+                    return;
 
                 var prevTerm = prev;
                 var newTerm = value;
