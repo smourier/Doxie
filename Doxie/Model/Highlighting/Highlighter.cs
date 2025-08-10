@@ -28,20 +28,13 @@ namespace Doxie.Model.Highlighting;
 /// text, using configurable <see cref="IFragmenter"/>, <see cref="Scorer"/>, <see cref="IFormatter"/>,
 /// <see cref="IEncoder"/> and tokenizers.
 /// </summary>
-public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmentScorer)
+public class Highlighter(IScorer fragmentScorer)
 {
-    public static readonly int DEFAULT_MAX_CHARS_TO_ANALYZE = 50 * 1024;
+    public static readonly int DefaultMaxCharsToAnalyze = 50 * 1024;
 
-    private int _maxDocCharsToAnalyze = DEFAULT_MAX_CHARS_TO_ANALYZE;
-    private readonly IFormatter _formatter = formatter; // LUCENENET: marked readonly
-    private IEncoder _encoder = encoder;
-    private IFragmenter _textFragmenter = new SimpleFragmenter();
-    private IScorer _fragmentScorer = fragmentScorer;
-
-    public Highlighter(IFormatter formatter, IScorer fragmentScorer)
-        : this(formatter, new DefaultEncoder(), fragmentScorer)
-    {
-    }
+    public virtual int MaxDocCharsToAnalyze { get; set; } = DefaultMaxCharsToAnalyze;
+    public virtual IFragmenter TextFragmenter { get; set; } = new SimpleFragmenter();
+    public virtual IScorer FragmentScorer { get; set; } = fragmentScorer;
 
     /// <summary>
     /// Highlights chosen terms in a text, extracting the most relevant section.
@@ -54,7 +47,7 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
     /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
     public string? GetBestFragment(Analyzer analyzer, string fieldName, string text)
     {
-        TokenStream tokenStream = analyzer.GetTokenStream(fieldName, text);
+        var tokenStream = analyzer.GetTokenStream(fieldName, text);
         return GetBestFragment(tokenStream, text);
     }
 
@@ -76,11 +69,10 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
     /// <exception cref="InvalidTokenOffsetsException">thrown if any token's EndOffset exceeds the provided text's length</exception>
     public string? GetBestFragment(TokenStream tokenStream, string text)
     {
-        string[] results = GetBestFragments(tokenStream, text, 1);
+        var results = GetBestFragments(tokenStream, text, 1);
         if (results.Length > 0)
-        {
             return results[0];
-        }
+
         return null;
     }
 
@@ -100,7 +92,7 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
         string text,
         int maxNumFragments)
     {
-        TokenStream tokenStream = analyzer.GetTokenStream(fieldName, text);
+        var tokenStream = analyzer.GetTokenStream(fieldName, text);
         return GetBestFragments(tokenStream, text, maxNumFragments);
     }
 
@@ -120,7 +112,7 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
     {
         maxNumFragments = Math.Max(1, maxNumFragments); //sanity check
 
-        TextFragment[] frag = GetBestTextFragments(tokenStream, text, true, maxNumFragments);
+        var frag = GetBestTextFragments(tokenStream, text, true, maxNumFragments);
 
         //Get text
         var fragTexts = new JCG.List<string>();
@@ -155,17 +147,17 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
         tokenStream.Reset();
         var currentFrag = new TextFragment(newText, newText.Length, docFrags.Count);
 
-        if (_fragmentScorer is QueryScorer queryScorer)
+        if (FragmentScorer is QueryScorer queryScorer)
         {
-            queryScorer.SetMaxDocCharsToAnalyze(_maxDocCharsToAnalyze);
+            queryScorer.SetMaxDocCharsToAnalyze(MaxDocCharsToAnalyze);
         }
 
-        var newStream = _fragmentScorer.Init(tokenStream);
+        var newStream = FragmentScorer.Init(tokenStream);
         if (newStream != null)
         {
             tokenStream = newStream;
         }
-        _fragmentScorer.StartFragment(currentFrag);
+        FragmentScorer.StartFragment(currentFrag);
         docFrags.Add(currentFrag);
 
         var fragQueue = new FragmentQueue(maxNumFragments);
@@ -176,22 +168,17 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
             int startOffset;
             int endOffset;
             int lastEndOffset = 0;
-            _textFragmenter.Start(text, tokenStream);
+            TextFragmenter.Start(text, tokenStream);
 
             var tokenGroup = new TokenGroup(tokenStream);
 
-            for (bool next = tokenStream.IncrementToken();
-                 next && offsetAtt.StartOffset < _maxDocCharsToAnalyze;
+            for (var next = tokenStream.IncrementToken();
+                 next && offsetAtt.StartOffset < MaxDocCharsToAnalyze;
                  next = tokenStream.IncrementToken())
             {
-                if (offsetAtt.EndOffset > text.Length
-                    ||
-                    offsetAtt.StartOffset > text.Length
-                    )
-                {
-                    throw new Exception("Token " + termAtt.ToString()
-                                + " exceeds length of provided text sized " + text.Length);
-                }
+                if (offsetAtt.EndOffset > text.Length || offsetAtt.StartOffset > text.Length)
+                    throw new Exception("Token " + termAtt.ToString() + " exceeds length of provided text sized " + text.Length);
+
                 if (tokenGroup.NumTokens > 0 && tokenGroup.IsDistinct())
                 {
                     //the current token is distinct from previous tokens -
@@ -199,34 +186,31 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
                     startOffset = tokenGroup.MatchStartOffset;
                     endOffset = tokenGroup.MatchEndOffset;
                     tokenText = text[startOffset..endOffset];
-                    string markedUpText = _formatter.HighlightTerm(_encoder.EncodeText(tokenText), tokenGroup);
                     //store any whitespace etc from between this and last group
                     if (startOffset > lastEndOffset)
-                        newText.Append(_encoder.EncodeText(text[lastEndOffset..startOffset]));
-                    newText.Append(markedUpText);
+                    {
+                        newText.Append(text[lastEndOffset..startOffset]);
+                    }
+
+                    newText.Append(tokenText);
                     lastEndOffset = Math.Max(endOffset, lastEndOffset);
                     tokenGroup.Clear();
 
                     //check if current token marks the start of a new fragment
-                    if (_textFragmenter.IsNewFragment())
+                    if (TextFragmenter.IsNewFragment())
                     {
-                        currentFrag.Score = _fragmentScorer.FragmentScore;
+                        currentFrag.Score = FragmentScorer.FragmentScore;
                         //record stats for a new fragment
                         currentFrag.TextEndPos = newText.Length;
                         currentFrag = new TextFragment(newText, newText.Length, docFrags.Count);
-                        _fragmentScorer.StartFragment(currentFrag);
+                        FragmentScorer.StartFragment(currentFrag);
                         docFrags.Add(currentFrag);
                     }
                 }
 
-                tokenGroup.AddToken(_fragmentScorer.GetTokenScore());
-
-                //                if(lastEndOffset>maxDocBytesToAnalyze)
-                //                {
-                //                    break;
-                //                }
+                tokenGroup.AddToken(FragmentScorer.GetTokenScore());
             }
-            currentFrag.Score = _fragmentScorer.FragmentScore;
+            currentFrag.Score = FragmentScorer.FragmentScore;
 
             if (tokenGroup.NumTokens > 0)
             {
@@ -234,25 +218,20 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
                 startOffset = tokenGroup.MatchStartOffset;
                 endOffset = tokenGroup.MatchEndOffset;
                 tokenText = text[startOffset..endOffset];
-                var markedUpText = _formatter.HighlightTerm(_encoder.EncodeText(tokenText), tokenGroup);
                 //store any whitespace etc from between this and last group
                 if (startOffset > lastEndOffset)
-                    newText.Append(_encoder.EncodeText(text[lastEndOffset..startOffset]));
-                newText.Append(markedUpText);
+                {
+                    newText.Append(text[lastEndOffset..startOffset]);
+                }
+                newText.Append(tokenText);
                 lastEndOffset = Math.Max(lastEndOffset, endOffset);
             }
 
             //Test what remains of the original text beyond the point where we stopped analyzing 
-            if (
-                //                    if there is text beyond the last token considered..
-                lastEndOffset < text.Length
-                &&
-                //                    and that text is not too large...
-                text.Length <= _maxDocCharsToAnalyze
-                )
+            if (lastEndOffset < text.Length && text.Length <= MaxDocCharsToAnalyze)
             {
                 //append it to the last fragment
-                newText.Append(_encoder.EncodeText(text[lastEndOffset..]));
+                newText.Append(text[lastEndOffset..]);
             }
 
             currentFrag.TextEndPos = newText.Length;
@@ -340,27 +319,23 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
                 for (var i = 0; i < frag.Length; i++)
                 {
                     if (frag[i] is null)
-                    {
                         continue;
-                    }
+
                     //merge any contiguous blocks 
                     for (var x = 0; x < frag.Length; x++)
                     {
                         var fragX = frag[x];
                         if (fragX is null)
-                        {
                             continue;
-                        }
 
                         var fragI = frag[i];
                         if (fragI is null)
-                        {
                             break;
-                        }
+
                         TextFragment? frag1 = null;
                         TextFragment? frag2 = null;
-                        int frag1Num = 0;
-                        int frag2Num = 0;
+                        var frag1Num = 0;
+                        var frag2Num = 0;
                         int bestScoringFragNum;
                         int worstScoringFragNum;
                         //if blocks are contiguous....
@@ -420,7 +395,7 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
         int maxNumFragments,
         string separator)
     {
-        string[] sections = GetBestFragments(tokenStream, text, maxNumFragments);
+        var sections = GetBestFragments(tokenStream, text, maxNumFragments);
         var result = new StringBuilder();
         for (var i = 0; i < sections.Length; i++)
         {
@@ -431,30 +406,6 @@ public class Highlighter(IFormatter formatter, IEncoder encoder, IScorer fragmen
             result.Append(sections[i]);
         }
         return result.ToString();
-    }
-
-    public virtual int MaxDocCharsToAnalyze
-    {
-        get => _maxDocCharsToAnalyze;
-        set => _maxDocCharsToAnalyze = value;
-    }
-
-    public virtual IFragmenter TextFragmenter
-    {
-        get => _textFragmenter;
-        set => _textFragmenter = value;
-    }
-
-    public virtual IScorer FragmentScorer
-    {
-        get => _fragmentScorer;
-        set => _fragmentScorer = value;
-    }
-
-    public virtual IEncoder Encoder
-    {
-        get => _encoder;
-        set => _encoder = value;
     }
 
     private sealed class FragmentQueue(int size) : PriorityQueue<TextFragment>(size)

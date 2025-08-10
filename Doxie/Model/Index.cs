@@ -451,21 +451,6 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private static readonly Lazy<PropertyInfo> _fragmentTextStartPos = new(() =>
-        typeof(TextFragment).GetProperty("TextStartPos", BindingFlags.NonPublic | BindingFlags.Instance) ??
-        throw new InvalidOperationException("Could not find TextStartPos property on TextFragment."));
-
-    private static readonly Lazy<PropertyInfo> _fragmentTextEndPos = new(() =>
-        typeof(TextFragment).GetProperty("TextEndPos", BindingFlags.NonPublic | BindingFlags.Instance) ??
-        throw new InvalidOperationException("Could not find TextEndPos property on TextFragment."));
-
-    // we don't want no html here
-    private sealed class NullFormatter : IFormatter
-    {
-        public static NullFormatter Instance { get; } = new();
-        public string HighlightTerm(string originalText, TokenGroup tokenGroup) => originalText;
-    }
-
     public IReadOnlyList<IndexFragment> Highlight(string query, string originalText)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -477,8 +462,9 @@ public class Index : INotifyPropertyChanged, IDisposable
         var qry = parser.Parse(query);
         var scorer = new QueryScorer(qry);
 
-        var highlighter = new Highlighter(NullFormatter.Instance, scorer)
+        var highlighter = new Highlighter(scorer)
         {
+            TextFragmenter = new SimpleFragmenter(0)
         };
 
         var fragmentzs = highlighter.GetBestFragments(analyzer, f, originalText, 100);
@@ -498,9 +484,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         var list = new List<IndexFragment>();
         foreach (var fragment in fragments.Where(f => f.Score > 0))
         {
-            var startOffset = (int)_fragmentTextStartPos.Value.GetValue(fragment)!;
-            var endOffset = (int)_fragmentTextEndPos.Value.GetValue(fragment)!;
-            list.Add(new IndexFragment(startOffset, endOffset));
+            list.Add(new IndexFragment(fragment.TextStartPos, fragment.TextEndPos));
         }
 
         return list;

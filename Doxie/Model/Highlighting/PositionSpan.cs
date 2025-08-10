@@ -23,6 +23,6 @@
 /// </summary>
 public class PositionSpan(int start, int end)
 {
-    public int Start { get; set; } = start;
-    public int End { get; set; } = end;
+    public int Start { get; } = start;
+    public int End { get; } = end;
 }

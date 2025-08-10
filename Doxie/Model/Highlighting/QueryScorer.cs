@@ -86,6 +86,7 @@ public class QueryScorer : IScorer
     /// <param name="defaultField">The default field for queries with the field name unspecified</param>
     public QueryScorer(Query query, IndexReader reader, string field, string defaultField)
     {
+        ArgumentNullException.ThrowIfNull(defaultField);
         _defaultField = defaultField.Intern();
         Init(query, field, reader, true);
     }
@@ -98,6 +99,7 @@ public class QueryScorer : IScorer
     /// <param name="defaultField">The default field for queries with the field name unspecified</param>
     public QueryScorer(Query query, string field, string defaultField)
     {
+        ArgumentNullException.ThrowIfNull(defaultField);
         _defaultField = defaultField.Intern();
         Init(query, field, null, true);
     }
@@ -108,9 +110,10 @@ public class QueryScorer : IScorer
     /// <param name="weightedTerms">an array of pre-created <see cref="WeightedSpanTerm"/>s</param>
     public QueryScorer(WeightedSpanTerm[] weightedTerms)
     {
+        ArgumentNullException.ThrowIfNull(weightedTerms);
         _fieldWeightedSpanTerms = new JCG.Dictionary<string, WeightedSpanTerm>(weightedTerms.Length);
 
-        foreach (WeightedSpanTerm t in weightedTerms)
+        foreach (var t in weightedTerms)
         {
             if (!_fieldWeightedSpanTerms.TryGetValue(t.Term, out var existingTerm) ||
                 existingTerm is null ||
@@ -132,6 +135,13 @@ public class QueryScorer : IScorer
     /// The highest weighted term (useful for passing to <see cref="GradientFormatter"/> to set top end of coloring scale).
     /// </summary>
     public virtual float MaxTermWeight => _maxTermWeight;
+
+    /// <summary>
+    /// Controls whether or not multi-term queries are expanded
+    /// against a <see cref="Index.Memory.MemoryIndex"/> <see cref="IndexReader"/>.
+    /// <c>true</c> if multi-term queries should be expanded
+    /// </summary>
+    public virtual bool ExpandMultiTermQuery { get; set; } = true;
 
     /// <seealso cref="IScorer.GetTokenScore()"/>
     public virtual float GetTokenScore()
@@ -191,6 +201,7 @@ public class QueryScorer : IScorer
 
     private void Init(Query query, string? field, IndexReader? reader, bool expandMultiTermQuery)
     {
+        ArgumentNullException.ThrowIfNull(query);
         _reader = reader;
         ExpandMultiTermQuery = expandMultiTermQuery;
         _query = query;
@@ -230,13 +241,6 @@ public class QueryScorer : IScorer
         _foundTerms = [];
         _totalScore = 0;
     }
-
-    /// <summary>
-    /// Controls whether or not multi-term queries are expanded
-    /// against a <see cref="Index.Memory.MemoryIndex"/> <see cref="IndexReader"/>.
-    /// <c>true</c> if multi-term queries should be expanded
-    /// </summary>
-    public virtual bool ExpandMultiTermQuery { get; set; } = true;
 
     /// <summary>
     /// By default, <see cref="TokenStream"/>s that are not of the type

@@ -36,7 +36,6 @@ public class WeightedSpanTermExtractor
     private string? _fieldName;
     private TokenStream? _tokenStream;
     private readonly string? _defaultField;
-    private bool _expandMultiTermQuery;
     private bool _cachedTokenStream;
     private bool _wrapToCaching = true;
     private int _maxDocCharsToAnalyze;
@@ -49,6 +48,10 @@ public class WeightedSpanTermExtractor
             _defaultField = defaultField.Intern();
         }
     }
+
+    public virtual bool ExpandMultiTermQuery { get; set; }
+    public virtual bool IsCachedTokenStream => _cachedTokenStream;
+    public virtual TokenStream? TokenStream => _tokenStream;
 
     /// <summary>
     /// Fills a <see cref="T:IDictionary{string,WeightedSpanTerm}"/> with <see cref="WeightedSpanTerm"/>s using the terms from the supplied <paramref name="query"/>.
@@ -207,10 +210,8 @@ public class WeightedSpanTermExtractor
             var origQuery = query;
             if (query is MultiTermQuery)
             {
-                if (!_expandMultiTermQuery)
-                {
+                if (!ExpandMultiTermQuery)
                     return;
-                }
 
                 var copy = (MultiTermQuery)query.Clone();
                 copy.MultiTermRewriteMethod = MultiTermQuery.SCORING_BOOLEAN_QUERY_REWRITE;
@@ -534,7 +535,7 @@ public class WeightedSpanTermExtractor
 
     protected virtual bool MustRewriteQuery(SpanQuery spanQuery)
     {
-        if (!_expandMultiTermQuery)
+        if (!ExpandMultiTermQuery)
             return false; // Will throw NotImplementedException in case of a SpanRegexQuery.
 
         if (spanQuery is FieldMaskingSpanQuery fieldMaskingSpanQuery)
@@ -635,16 +636,6 @@ public class WeightedSpanTermExtractor
         public bool Remove(K key) => _wrapped.Remove(key);
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
-
-    public virtual bool ExpandMultiTermQuery
-    {
-        set => _expandMultiTermQuery = value;
-        get => _expandMultiTermQuery;
-    }
-
-    public virtual bool IsCachedTokenStream => _cachedTokenStream;
-
-    public virtual TokenStream? TokenStream => _tokenStream;
 
     /// <summary>
     /// By default, <see cref="Analysis.TokenStream"/>s that are not of the type

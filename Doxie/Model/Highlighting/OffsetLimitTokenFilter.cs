@@ -40,7 +40,7 @@ public sealed class OffsetLimitTokenFilter : TokenFilter
     {
         if (_offsetCount < _offsetLimit && m_input.IncrementToken())
         {
-            int offsetLength = _offsetAttrib.EndOffset - _offsetAttrib.StartOffset;
+            var offsetLength = _offsetAttrib.EndOffset - _offsetAttrib.StartOffset;
             _offsetCount += offsetLength;
             return true;
         }

@@ -22,23 +22,12 @@ namespace Doxie.Model.Highlighting;
 /// <summary>
 /// Lightweight class to hold term, weight, and positions used for scoring this term.
 /// </summary>
-public class WeightedSpanTerm : WeightedTerm
+public class WeightedSpanTerm(float weight, string term, bool positionSensitive = false) : WeightedTerm(weight, term)
 {
-    private bool _positionSensitive;
     private readonly JCG.List<PositionSpan> _positionSpans = [];
 
-    public WeightedSpanTerm(float weight, string term)
-        : base(weight, term)
-    {
-        // LUCENENET NOTE: Duplicate instantiation
-        //_positionSpans = new List<PositionSpan>();
-    }
-
-    public WeightedSpanTerm(float weight, string term, bool positionSensitive)
-        : base(weight, term)
-    {
-        _positionSensitive = positionSensitive;
-    }
+    public virtual bool IsPositionSensitive { get; set; } = positionSensitive;
+    public virtual IList<PositionSpan> PositionSpans => _positionSpans;
 
     /// <summary>
     /// Checks to see if this term is valid at <paramref name="position"/>.
@@ -64,12 +53,4 @@ public class WeightedSpanTerm : WeightedTerm
     }
 
     public virtual void AddPositionSpans(IList<PositionSpan> positionSpans) => _positionSpans.AddRange(positionSpans);
-
-    public virtual bool IsPositionSensitive
-    {
-        get => _positionSensitive;
-        set => _positionSensitive = value;
-    }
-
-    public virtual IList<PositionSpan> PositionSpans => _positionSpans;
 }

@@ -39,17 +39,17 @@ public class TokenGroup(TokenStream tokenStream)
     /// <summary>
     /// the number of tokens in this group
     /// </summary>
-    public virtual int NumTokens { get; internal set; } = 0;
+    public virtual int NumTokens { get; internal set; }
 
     /// <summary>
     /// the start position in the original text
     /// </summary>
-    public virtual int StartOffset { get; internal set; } = 0;
+    public virtual int StartOffset { get; internal set; }
 
     /// <summary>
     /// the end position in the original text
     /// </summary>
-    public virtual int EndOffset { get; private set; } = 0;
+    public virtual int EndOffset { get; private set; }
 
     /// <summary>
     /// all tokens' scores summed up
@@ -60,8 +60,8 @@ public class TokenGroup(TokenStream tokenStream)
     {
         if (NumTokens < MaxNumTokensPerGroup)
         {
-            int termStartOffset = _offsetAtt.StartOffset;
-            int termEndOffset = _offsetAtt.EndOffset;
+            var termStartOffset = _offsetAtt.StartOffset;
+            var termEndOffset = _offsetAtt.EndOffset;
             if (NumTokens == 0)
             {
                 StartOffset = MatchStartOffset = termStartOffset;
