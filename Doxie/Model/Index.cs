@@ -279,6 +279,17 @@ public class Index : INotifyPropertyChanged, IDisposable
                 continue;
             }
 
+            var dirPath = Path.GetDirectoryName(entry);
+            if (dirPath != null)
+            {
+                var dirName = Path.GetFileName(dirPath);
+                if (excludedDirs.Contains(dirName.ToLowerInvariant()))
+                {
+                    batch.NumberOfSkippedFiles++;
+                    continue;
+                }
+            }
+
             var ext = Path.GetExtension(entry).ToLowerInvariant();
 
             batch.EndTimeUtc = DateTime.UtcNow;
