@@ -275,7 +275,7 @@
                                 Grid.Column="1"
                                 Margin="5"
                                 Click="DeleteDir_Click">
-                                Delete
+                                Delete directory
                             </Button>
                             <Button
                                 x:Name="scanDir"

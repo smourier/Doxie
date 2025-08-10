@@ -71,7 +71,7 @@
                 VerticalAlignment="Top"
                 FontSize="16"
                 Foreground="#E89644"
-                Text="{Binding TotalHits, StringFormat={}{0} File(s) Hit}" />
+                Text="{Binding TotalHits, StringFormat={}{0} file(s) hit}" />
 
             <ListView
                 x:Name="filesList"
@@ -103,7 +103,8 @@
                                 Text="{Binding LinesCount, StringFormat={}{0} lines}" />
                             <Grid.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Click="OpenInExplorer_Click" Header="Open in Explorer..." />
+                                    <MenuItem Click="OpenInExplorer_Click" Header="Open..." />
+                                    <MenuItem Click="OpenContaingFolder_Click" Header="Open containing folder in Explorer..." />
                                 </ContextMenu>
                             </Grid.ContextMenu>
                         </Grid>
@@ -134,19 +135,28 @@
                     VerticalAlignment="Center"
                     FontSize="16"
                     Foreground="#E89644"
-                    Text="{Binding Item.Name, StringFormat={}\'{0}\' Source}" />
+                    Text="{Binding Item.Name, StringFormat={}\'{0}\' source}" />
                 <Button
                     x:Name="nextHit"
                     Margin="5,0,0,0"
-                    Click="NextHit_Click">
+                    Click="NextHit_Click"
+                    ToolTip="F8 for next">
                     Next Hit
                 </Button>
                 <Button
                     x:Name="previousHit"
                     Margin="5,0,0,0"
-                    Click="PreviousHit_Click">
+                    Click="PreviousHit_Click"
+                    ToolTip="Shift+F8 for previous">
                     Previous Hit
                 </Button>
+                <TextBlock
+                    Margin="5,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Foreground="#E89644"
+                    Text="{Binding CurrentHit, StringFormat=Current hit: {0}}"
+                    Visibility="{Binding IsCurrentHitVisible, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
 
             <Wpf:WebView2

@@ -55,10 +55,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Index?.Dispose();
         Index = index;
         OnPropertyChanged(nameof(Index));
+        UpdateGridVisibility();
+    }
+
+    private void UpdateGridVisibility()
+    {
         grid.Visibility = Visibility.Visible;
-        if (index.Directories.Count > 0)
+        if (Index?.Directories.Count > 0)
         {
-            directories.ItemsSource = index.Directories;
+            directories.ItemsSource = Index.Directories;
             directories.SelectedIndex = 0;
             batches.Visibility = Visibility.Visible;
         }
@@ -254,6 +259,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (fld.ShowDialog(this) == true)
         {
             Index.EnsureDirectory(fld.FolderName);
+            OnPropertyChanged(nameof(Index));
+            UpdateGridVisibility();
         }
     }
 
@@ -282,6 +289,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     {
                         Index.EnsureDirectory(path);
                     }
+                    OnPropertyChanged(nameof(Index));
+                    UpdateGridVisibility();
                 }
             }
         }
@@ -419,6 +428,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void QueryIndex_Click(object sender, RoutedEventArgs e)
     {
+        try
+        {
+            var version = CoreWebView2Environment.GetAvailableBrowserVersionString();
+        }
+        catch
+        {
+            MessageBox.Show(this, "Failed to check for WebView2 runtime. Please ensure you have the latest version installed.", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         if (Index == null || Index.Directories.Count == 0)
         {
             MessageBox.Show(this, "There's nothing to query yet, you could add a directory and scan it.", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Information);

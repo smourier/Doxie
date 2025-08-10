@@ -53,6 +53,7 @@ public class Highlighter(IScorer fragmentScorer)
     {
         ArgumentNullException.ThrowIfNull(analyzer);
         ArgumentNullException.ThrowIfNull(field);
+        ArgumentNullException.ThrowIfNull(text);
 
         var tokenStream = analyzer.GetTokenStream(field, text);
         var currentStream = tokenStream;

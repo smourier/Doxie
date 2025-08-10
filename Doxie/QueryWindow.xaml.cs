@@ -16,10 +16,12 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private int _linesCount;
     private bool _isLinesCountVisible;
     private bool _isDetectedLanguageVisible;
-    private bool _isHitsVisible = true;
+    private bool _isHitsVisible;
     private bool _isHighlightedRangesVisible;
+    private bool _isCurrentHitVisible;
     private int _hitsCount;
     private string? _modelLanguageName;
+    private string? _currentHit;
     private Encoding? _detectedEncoding;
     private string? _errorMessage;
 
@@ -49,6 +51,33 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             _modelLanguageName = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsDetectedLanguageVisible));
+        }
+    }
+
+    public string? CurrentHit
+    {
+        get => _currentHit;
+        set
+        {
+            if (_currentHit == value)
+                return;
+
+            _currentHit = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsCurrentHitVisible));
+        }
+    }
+
+    public bool IsCurrentHitVisible
+    {
+        get => _isCurrentHitVisible;
+        set
+        {
+            if (_isCurrentHitVisible == value)
+                return;
+
+            _isCurrentHitVisible = value;
+            OnPropertyChanged();
         }
     }
 
@@ -246,6 +275,17 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             Close();
             e.Handled = true;
         }
+        else if (e.Key == Key.F8)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                NextHit_Click(null!, null!);
+            }
+            else
+            {
+                PreviousHit_Click(null!, null!);
+            }
+        }
         base.OnKeyDown(e);
     }
 
@@ -314,7 +354,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                     if (fragment.TextStartPos == fragment.TextEndPos)
                         continue;
 
-                    var rng = _stream.GetRange(fragment.TextStartPos + 1, fragment.TextEndPos - fragment.TextStartPos);
+                    var rng = _stream.GetRange(fragment.TextStartPos + 1, fragment.Length);
                     if (rng == null)
                         continue;
 
@@ -328,12 +368,12 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
                 if (ranges.Count > 0)
                 {
+                    IsHitsVisible = true;
                     _highlightedRanges = ranges;
                     IsHighlightedRangesVisible = true;
                     HitsCount = ranges.Count;
                     await HighlightRanges(ranges);
                 }
-                IsHitsVisible = true;
             }
             return true;
         }
@@ -366,7 +406,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
         var texts = string.Join(Environment.NewLine, _stream.GetTexts(_currentStreamLineIndex, linesCount));
         _currentStreamLineIndex += linesCount;
-        e.DocumentText = texts;
+        e.DocumentText = texts + Environment.NewLine;
     }
 
     private Task<string> EnableMinimap(bool enabled) => webView.ExecuteScriptAsync("editor.updateOptions({minimap:{enabled:" + enabled.ToString().ToLowerInvariant() + "}})");
@@ -446,12 +486,23 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         Extensions.OpenInExplorer(item.Path);
     }
 
+    private void OpenContaingFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var item = sender.GetDataContext<IndexSearchResultItem>();
+        if (item == null || item.Path == null || !IOUtilities.PathIsFile(item.Path))
+            return;
+
+        Extensions.OpenFoldersAndSelectFiles([item.Path]);
+    }
+
     private async Task GoToHighlightedRange()
     {
         var range = _highlightedRanges![_highlightedRangesIndex];
         await RevealLineInCenter(range.StartLineNumber);
         await MoveEditorTo(range.StartLineNumber, range.StartColumn);
         await SetSelection(range.StartLineNumber);
+        IsCurrentHitVisible = true;
+        CurrentHit = $"{_highlightedRangesIndex + 1}/{_highlightedRanges.Count} at line {range.StartLineNumber}, column {range.StartColumn}";
     }
 
     private void NextHit_Click(object sender, RoutedEventArgs e)

@@ -396,6 +396,97 @@ public static class Extensions
         return dispatcher.Invoke(func);
     }
 
+    public static void OpenFoldersAndSelectFiles(IEnumerable<string> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+
+        // get all items & group by folder (path)
+        var items = Item.FromPaths(files);
+        try
+        {
+            foreach (var group in items.GroupBy(g => g.ToString()))
+            {
+                var pidls = group.Select(g => g.ChildPidl).ToArray();
+                _ = Item.SHOpenFolderAndSelectItems(group.First().ParentPidl, group.Count(), pidls, 0);
+            }
+        }
+        finally
+        {
+            items.ForEach(i => i.Dispose());
+        }
+    }
+
+    private sealed class Item : IDisposable
+    {
+        public string? ParentPath;
+        public nint ParentPidl;
+        public nint ChildPidl;
+        public override string ToString() => ParentPath ?? string.Empty;
+
+        public static List<Item> FromPaths(IEnumerable<string> files)
+        {
+            var list = new List<Item>();
+            foreach (var file in files)
+            {
+                // build IShellItem
+                if (SHCreateItemFromParsingName(file, 0, typeof(IShellItem).GUID, out var unk) < 0)
+                    continue;
+
+                const uint SIGDN_DESKTOPABSOLUTEPARSING = 0x80028000;
+                var item = (IShellItem)Marshal.GetObjectForIUnknown(unk);
+                item.GetParent(out var parent);
+                parent.GetDisplayName(SIGDN_DESKTOPABSOLUTEPARSING, out var path);
+
+                // get parent & item relative pidls
+                ((IParentAndItem)item).GetParentAndItem(out var parentPidl, 0, out var childPidl);
+                list.Add(new Item { ParentPath = path, ParentPidl = parentPidl, ChildPidl = childPidl });
+            }
+            return list;
+        }
+
+        public void Dispose()
+        {
+            if (ParentPidl != 0)
+            {
+                Marshal.FreeCoTaskMem(ParentPidl);
+            }
+
+            if (ChildPidl != 0)
+            {
+                Marshal.FreeCoTaskMem(ChildPidl);
+            }
+        }
+
+        [DllImport("shell32.dll")]
+        public static extern int SHOpenFolderAndSelectItems(nint pidlFolder, int cidl, nint[] apidl, uint dwFlags);
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        public static extern int SHCreateItemFromParsingName(string pszPath, nint pbc, in Guid riid, out nint ppv);
+    }
+
+    // incomplete
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("43826d1e-e718-42ee-bc55-a1e261c37bfe")]
+    private partial interface IShellItem
+    {
+        void BindToHandler();
+
+        [PreserveSig]
+        int GetParent(out IShellItem ppsi);
+
+        [PreserveSig]
+        int GetDisplayName(uint sigdnName, [MarshalAs(UnmanagedType.LPWStr)] out string ppszName);
+    }
+
+    // incomplete
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("b3a4b685-b685-4805-99d9-5dead2873236")]
+    private partial interface IParentAndItem
+    {
+        void SetParentAndItem();
+
+        [PreserveSig]
+        int GetParentAndItem(out nint ppidlParent, nint ppsf, out nint ppidlChild);
+    }
+
     public static void OpenInExplorerFromParent(this string? path)
     {
         if (!string.IsNullOrWhiteSpace(path))

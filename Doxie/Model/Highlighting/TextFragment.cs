@@ -25,17 +25,17 @@ public class TextFragment(StringBuilder markedUpText, int textStartPos, int frag
 {
     private readonly StringBuilder _markedUpText = markedUpText ?? throw new ArgumentNullException(nameof(markedUpText));
 
-    public float Score { get; internal set; }
-    public int TextEndPos { get; internal set; }
-    public int TextStartPos { get; internal set; } = textStartPos;
-
     /// <summary>
     /// the fragment sequence number
     /// </summary>
     public int FragNum { get; } = fragNum;
+    public float Score { get; internal set; }
+    public int TextStartPos { get; internal set; } = textStartPos;
+    public int TextEndPos { get; internal set; }
+    public int Length => TextEndPos - TextStartPos;
 
     /// <summary>
     /// Returns the marked-up text for this text fragment 
     /// </summary>
-    public override string ToString() => _markedUpText.ToString(TextStartPos, TextEndPos - TextStartPos);
+    public override string ToString() => _markedUpText.ToString(TextStartPos, Length);
 }

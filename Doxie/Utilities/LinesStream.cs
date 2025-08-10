@@ -50,14 +50,20 @@ public class LinesStream : IDisposable
     public Line? GetContainingLine(long position) => GetContainingLine(Lines, position);
     private Line? GetContainingLine(IReadOnlyList<Line> lines, long position)
     {
+        if (position < 0 || position >= Stream.Length)
+            return null;
+
+        if (lines == null || lines.Count == 0)
+            return null;
+
         var low = 0;
         var high = lines.Count - 1;
+        Line? candidate = null;
 
         while (low <= high)
         {
             var mid = low + ((high - low) / 2);
             var line = lines[mid];
-
             var start = line.Position;
             var end = line.Position + line.Length;
 
@@ -65,15 +71,17 @@ public class LinesStream : IDisposable
             {
                 high = mid - 1;
             }
-            else if (position >= end)
+            else
             {
+                candidate = line;
+                if (position < end)
+                    return line;
+
                 low = mid + 1;
             }
-            else
-                return lines[mid];
         }
 
-        return null;
+        return candidate;
     }
 
     public Range? GetRange(long position, long length)
@@ -87,19 +95,21 @@ public class LinesStream : IDisposable
             return null;
 
         var startColumn = (int)(position - startLine.Position);
-        if (length <= startLine.Length || lines.Count == 1)
+        if (lines.Count == 1)
             return new Range(startLine.Index, startColumn, startLine.Index, startColumn + (int)length - 1);
 
-        var endLine = GetContainingLine(lines, position + length - 1);
+        var endPosition = position + length - 1;
+        var endLine = GetContainingLine(lines, endPosition);
         int endColumn;
         if (endLine == null)
         {
+            // last line
             endLine = lines[lines.Count - 1];
             endColumn = endLine.Length - 1;
         }
         else
         {
-            endColumn = (int)(position + length - 1 - endLine.Position);
+            endColumn = (int)(endPosition - endLine.Position);
         }
         return new Range(startLine.Index, startColumn, endLine.Index, endColumn);
     }
