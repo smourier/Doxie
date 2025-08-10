@@ -460,25 +460,15 @@ public class Index : INotifyPropertyChanged, IDisposable
         var analyzer = new StandardAnalyzer(LuceneVersion.LUCENE_48);
         var parser = new QueryParser(LuceneVersion.LUCENE_48, f, analyzer) { AllowLeadingWildcard = true, };
         var qry = parser.Parse(query);
-        var scorer = new QueryScorer(qry);
+        var scorer = new QueryScorer(qry, f);
 
-        var highlighter = new Highlighter(scorer)
-        {
-            TextFragmenter = new SimpleFragmenter(0)
-        };
-
-        var fragmentzs = highlighter.GetBestFragments(analyzer, f, originalText, 100);
-
-        var tokenStream = analyzer.GetTokenStream(f, originalText);
-        //tokenStream.Reset();
-        //for (var next = tokenStream.IncrementToken(); next; next = tokenStream.IncrementToken())
-        //{
-        //}
+        // note: the lucene highlighter has been modified to work better and faster in our context
+        var highlighter = new Highlighter(scorer) { TextFragmenter = new SimpleFragmenter(0) };
 
         var sw = Stopwatch.StartNew();
-        var fragments = highlighter.GetBestTextFragments(tokenStream, originalText, false, 100);
+        var fragments = highlighter.GetBestTextFragments(analyzer, f, originalText);
         var texts = fragments.Where(f => f.Score > 0).Select(frag => frag?.ToString() ?? string.Empty).ToArray();
-        EventProvider.Default.WriteMessage("sw: " + sw.Elapsed + " count:" + fragments.Length);
+        EventProvider.Default.WriteMessage("sw: " + sw.Elapsed + " count:" + texts.Length);
         sw.Restart();
 
         var list = new List<IndexFragment>();
@@ -493,7 +483,7 @@ public class Index : INotifyPropertyChanged, IDisposable
     private static SearchResultItem CreateItemFunc(Index index, int docIndex, ScoreDoc scoreDoc, Document doc) => new() { Index = docIndex, Score = scoreDoc.Score, DocumentId = scoreDoc.Doc, Document = doc };
 
     public SearchResult<SearchResultItem> Search(string query, int maximumDocuments = int.MaxValue)
-        => Search<SearchResultItem>(query, CreateItemFunc, maximumDocuments);
+        => Search(query, CreateItemFunc, maximumDocuments);
 
     public virtual SearchResult<T> Search<T>(string query, Func<Index, int, ScoreDoc, Document, T?> createItem, int maximumDocuments = int.MaxValue) where T : SearchResultItem
     {

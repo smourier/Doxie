@@ -32,19 +32,7 @@ public class TextFragment(StringBuilder markedUpText, int textStartPos, int frag
     /// <summary>
     /// the fragment sequence number
     /// </summary>
-    public virtual int FragNum { get; protected internal set; } = fragNum;
-
-    /// <param name="frag2">Fragment to be merged into this one</param>
-    public virtual void Merge(TextFragment frag2)
-    {
-        TextEndPos = frag2.TextEndPos;
-        Score = Math.Max(Score, frag2.Score);
-    }
-
-    /// <summary>
-    /// true if this fragment follows the one passed
-    /// </summary>
-    public virtual bool Follows(TextFragment fragment) => TextStartPos == fragment.TextEndPos;
+    public int FragNum { get; } = fragNum;
 
     /// <summary>
     /// Returns the marked-up text for this text fragment 
