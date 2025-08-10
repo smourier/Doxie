@@ -26,8 +26,7 @@ internal class Program
             Console.WriteLine($"Indexing file: {e.FilePath} count: {e.Batch.NumberOfDocuments} elapsed: {e.Batch.Duration} files/sec: {e.Batch.ProcessedFilesPerSecond}");
         };
 
-        //var request = new IndexCreationRequest(@"E:\github\microsoft\VCSamples")
-        var request = new IndexScanRequest(index.EnsureDirectory(@"E:\smo\GitHub\Axxon"))
+        var request = new IndexScanRequest(index.EnsureDirectory(@"E:\github\microsoft\VCSamples"))
         {
             CancellationTokenSource = cts
         };
