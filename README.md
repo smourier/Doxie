@@ -23,12 +23,12 @@ To create an index you must:
 * Use the "File" menu, select "Open or create an index..."
 * Add one or more directories using the "Add a directory to index..." button, choose a directory
 * Click on this directory's "Scan" button in the list
-* The index will be created but by default, but no files will be put in it, since no file extensions are defined to be included in the index. Each time the directory is scanned
-* So, you can either add extensions specifically using the "Add..." in the "Included file extensions" section, or since the directory was scanned, use the "View" button in the "Non-Indexed file extensions" columns and choose what you want from there (file extensions are annotated with a "perceived" type that is more a hint):
+* The index will be created but by default, but no files will be put in it, since no file extensions are defined to be included in the index. Each time the directory is scanned, a "batch" will be associated (like a log of what happened). Older batch's related indexed data is deleted. Click on a directory to see its batches listed (latest first).
+* So, you can either add extensions specifically using the "Add..." in the "Included file extensions" section, or since the directory was scanned, use the "View" button in the "Non-Indexed file extensions" columns of the latest batch, and choose what extensions you want to add from there (file extensions are annotated with a "perceived" type that is more a hint):
 
 <img width="997" height="801" alt="image" src="https://github.com/user-attachments/assets/c1eafa9d-b216-4f70-b438-28f9ac7554f6" />
 
-Once you have added extensions, you can re-scan the directory all all directories using the "Scan all directories" button.
+Once you have added extensions, you can re-scan the directory all all directories using the "Scan all directories" button. Remember file extensions and directory exclusion settings are global to the index, so to all directories.
 
 
 Other points of interest:
