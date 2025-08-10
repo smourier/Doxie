@@ -1,10 +1,38 @@
 # Doxie
-A search engine, local to your machine, focused on source (or textual information) code. The application is written using WPF .NET 9, and the indexing and querying engine is powered by Apache Lucene.NET.
+A search engine, local to your machine, focused on source (or textual information) code.
 
 <img width="1003" height="801" alt="Screenshot 2025-08-10 175636" src="https://github.com/user-attachments/assets/a0ecb097-7bf4-458b-b88c-1f08764d287d" />
 
+# Indexing
+The application is written using the following technologies:
+
+* .NET 9
+* WPF (dark mode) for the UI framework
+* Lucene.NET for  the indexing and querying engine
+* SQLite (through [SQLNado](https://github.com/smourier/SQLNado))
+
+An index is a .doxidx file which contains everything. This file is a SQLite file, Doxie stores all the Lucene index in it (it's a Lucene SQLite directory implementation).
+You can copy the .doxidx file somewhere else if file paths are valid in both places where you open Doxie.
+
+To create an index you must:
+
+* Use the "File" menu, select "Open or create an index..."
+* Add a directory using the "Add a directory to index..." button, choose a directory
+* Click on this directory's "Scan" button in the list
+* The index will be created but by default, but no files will be put in it, since no file extensions are defined to be included in the index.
+* So, you can either add extensions specifically using the "Add..." in the "Included file extensions" section, or since the directory was scanned, use the "View" button in the "Non-Indexed file extensions" columns and choose what you want from there (file extensions are annotated with a "perceived" type that is more a hint):
+
+<img width="997" height="801" alt="image" src="https://github.com/user-attachments/assets/c1eafa9d-b216-4f70-b438-28f9ac7554f6" />
+
+
+
+Other points of interest:
+* Doxie reopens the last used index automatically when the app is ran.
+* All path treatments should be case-insensitive.
+* You can also exclude directory names from indexing, like "obj", "bin", "debug", "release".
+
 # Querying
-The query window will give you the relative paths that matched the query, and you can click on a result and display the source. The source is supposed to be present on your machine (it's *not* stored in the index).
+The query window will give you the relative paths that matched the query, and you can click on a result and display the source. The source is supposed to be present on your machine (it's *not* stored in the index). Right clicking on a path will display a context menu that allows you to open it using the Windows Shell or open its containing folder.
 
 The selected source code is displayed using the [Monaco Editor](https://microsoft.github.io/monaco-editor/) so it's capable of some syntax coloring. All hits in source window are surrounded by yellow boxes and you can navigate from hit to hit.
 
