@@ -165,9 +165,13 @@
             <StatusBarItem HorizontalAlignment="Stretch">
                 <TextBlock Foreground="White" Text="{Binding DetectedEncoding.WebName, StringFormat={}\'{0}\' detected encoding}" />
             </StatusBarItem>
+            <Separator Visibility="{Binding IsHitsVisible, Converter={StaticResource BoolToVis}}" />
+            <StatusBarItem HorizontalAlignment="Right" Visibility="{Binding IsHitsVisible, Converter={StaticResource BoolToVis}}">
+                <TextBlock Foreground="White" Text="{Binding HitsCount, StringFormat={}{0} hit(s)}" />
+            </StatusBarItem>
             <Separator Visibility="{Binding IsLinesCountVisible, Converter={StaticResource BoolToVis}}" />
             <StatusBarItem HorizontalAlignment="Right" Visibility="{Binding IsLinesCountVisible, Converter={StaticResource BoolToVis}}">
-                <TextBlock Foreground="White" Text="{Binding LinesCount, StringFormat={}{0} lines}" />
+                <TextBlock Foreground="White" Text="{Binding LinesCount, StringFormat={}{0} line(s)}" />
             </StatusBarItem>
             <Separator Visibility="{Binding IsDetectedLanguageVisible, Converter={StaticResource BoolToVis}}" />
             <StatusBarItem HorizontalAlignment="Right" Visibility="{Binding IsDetectedLanguageVisible, Converter={StaticResource BoolToVis}}">

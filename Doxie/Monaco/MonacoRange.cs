@@ -1,11 +1,13 @@
 ﻿namespace Doxie.Monaco;
 
-#pragma warning disable IDE1006 // Naming Styles
+// https://microsoft.github.io/monaco-editor/typedoc/classes/Range.html
 public class MonacoRange(int startLineNumber, int startColumn, int endLineNumber, int endColumn)
 {
-    public int startLineNumber { get; set; } = startLineNumber;
-    public int startColumn { get; set; } = startColumn;
-    public int endLineNumber { get; set; } = endLineNumber;
-    public int endColumn { get; set; } = endColumn;
+    public int StartLineNumber { get; set; } = startLineNumber;
+    public int StartColumn { get; set; } = startColumn;
+    public int EndLineNumber { get; set; } = endLineNumber;
+    public int EndColumn { get; set; } = endColumn;
+
+    public override string ToString() => $"{StartLineNumber}:{StartColumn} - {EndLineNumber}:{EndColumn}";
 }
-#pragma warning restore IDE1006 // Naming Styles
+

@@ -47,6 +47,63 @@ public class LinesStream : IDisposable
     public IReadOnlyList<Line> Lines => _lines ??= [];
     public IEnumerable<string> Texts => GetTexts(Lines);
 
+    public Line? GetContainingLine(long position) => GetContainingLine(Lines, position);
+    private Line? GetContainingLine(IReadOnlyList<Line> lines, long position)
+    {
+        var low = 0;
+        var high = lines.Count - 1;
+
+        while (low <= high)
+        {
+            var mid = low + ((high - low) / 2);
+            var line = lines[mid];
+
+            var start = line.Position;
+            var end = line.Position + line.Length;
+
+            if (position < start)
+            {
+                high = mid - 1;
+            }
+            else if (position >= end)
+            {
+                low = mid + 1;
+            }
+            else
+                return lines[mid];
+        }
+
+        return null;
+    }
+
+    public Range? GetRange(long position, long length)
+    {
+        var lines = Lines;
+        if (lines == null || lines.Count == 0)
+            return null;
+
+        var startLine = GetContainingLine(lines, position);
+        if (startLine == null)
+            return null;
+
+        var startColumn = (int)(position - startLine.Position);
+        if (length <= startLine.Length || lines.Count == 1)
+            return new Range(startLine.Index, startColumn, startLine.Index, startColumn + (int)length - 1);
+
+        var endLine = GetContainingLine(lines, position + length - 1);
+        int endColumn;
+        if (endLine == null)
+        {
+            endLine = lines[lines.Count - 1];
+            endColumn = endLine.Length - 1;
+        }
+        else
+        {
+            endColumn = (int)(position + length - 1 - endLine.Position);
+        }
+        return new Range(startLine.Index, startColumn, endLine.Index, endColumn);
+    }
+
     public string? GetText(Line line) => GetTexts([line]).FirstOrDefault();
     public string? GetText(int lineIndex)
     {
@@ -595,15 +652,29 @@ public class LinesStream : IDisposable
         }
     }
 
-    public sealed class Line(long position, int length, LineOptions options = LineOptions.None)
+    public readonly struct Range(int startLineNumber, int startColumn, int endLineNumber, int endColumn)
+    {
+        public int StartLineIndex { get; } = startLineNumber;
+        public int StartColumn { get; } = startColumn;
+        public int EndLineIndex { get; } = endLineNumber;
+        public int EndColumn { get; } = endColumn;
+
+        public override string ToString() => $"{StartLineIndex}:{StartColumn} - {EndLineIndex}:{EndColumn}";
+    }
+
+    public sealed class Line(long position, int length, LineOptions options = LineOptions.None) : IComparable<Line>, IEquatable<Line>
     {
         public long Position { get; } = position;
         public int Length { get; } = length;
         public LineOptions Options { get; } = options;
-        public int Index { get; set; }
+        public int Index { get; internal set; }
         public bool IsBroken => Options.HasFlag(LineOptions.Broken);
 
         public override string ToString() => $"{Index}: {Position} => {Position + Length - 1} ({Length})/{Options}";
+        public override int GetHashCode() => Index.GetHashCode();
+        public override bool Equals(object? obj) => obj is Line other && Equals(other);
+        public bool Equals(Line? other) => other is not null && Index == other.Index;
+        public int CompareTo(Line? other) { if (other is null) return 1; return Index.CompareTo(other.Index); }
     }
 
     public enum LineOptions

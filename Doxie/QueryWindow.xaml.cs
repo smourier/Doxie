@@ -14,6 +14,8 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private int _linesCount;
     private bool _isLinesCountVisible;
     private bool _isDetectedLanguageVisible;
+    private bool _isHitsVisible = true;
+    private int _hitsCount;
     private string? _modelLanguageName;
     private Encoding? _detectedEncoding;
     private string? _errorMessage;
@@ -77,6 +79,33 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                 return;
 
             _detectedEncoding = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int HitsCount
+    {
+        get => _hitsCount;
+        set
+        {
+            if (_hitsCount == value)
+                return;
+
+            _hitsCount = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsHitsVisible));
+        }
+    }
+
+    public bool IsHitsVisible
+    {
+        get => _isHitsVisible;
+        set
+        {
+            if (_isHitsVisible == value)
+                return;
+
+            _isHitsVisible = value;
             OnPropertyChanged();
         }
     }
@@ -241,6 +270,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
             _stream?.Dispose();
             IsLinesCountVisible = false;
+            IsHitsVisible = false;
             _currentStreamLineIndex = 0;
             _stream = new LinesStream(item.Path, encoding);
             _stream.Loaded += (s, e) =>
@@ -257,21 +287,34 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
             if (Settings.Current.MonacoHighlightHits)
             {
-                // re-reading the whole for hightlighting is (probably) faster than using the stream
+                // re-reading the whole for highlighting is (probably) faster than using the stream
                 var text = File.ReadAllText(item.Path, encoding);
                 var fragments = Index.GetFragmentsToHighlight(Query, text);
 
                 var ranges = new List<MonacoRange>();
-                foreach (var range in fragments)
+                foreach (var fragment in fragments)
                 {
-                    //_stream.GetLines
-                    //var lines = _stream.GetLines(range.StartOffset, range.Length).ToArray();
+                    if (fragment.TextStartPos == fragment.TextEndPos)
+                        continue;
+
+                    var rng = _stream.GetRange(fragment.TextStartPos + 1, fragment.TextEndPos - fragment.TextStartPos);
+                    if (rng == null)
+                        continue;
+
+                    var range = new MonacoRange(
+                        rng.Value.StartLineIndex + 1,
+                        rng.Value.StartColumn + 1,
+                        rng.Value.EndLineIndex + 1,
+                        rng.Value.EndColumn + 1);
+                    ranges.Add(range);
                 }
 
                 if (ranges.Count > 0)
                 {
+                    HitsCount = ranges.Count;
                     await HighlightRanges(ranges);
                 }
+                IsHitsVisible = true;
             }
             return true;
         }
@@ -315,7 +358,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private Task<string> MoveEditorTo(int? line = null, int? column = null) => webView.ExecuteScriptAsync($"moveEditorTo({column}, {line})");
     private Task<string> HighlightRanges(IEnumerable<MonacoRange> ranges)
     {
-        var json = JsonSerializer.Serialize(ranges);
+        var json = JsonSerializer.Serialize(ranges, MonacoExtensions.SerializerOptions);
         return webView.ExecuteScriptAsync($"highlightRanges('{json}')");
     }
 

@@ -1,5 +1,6 @@
 ﻿using Doxie.Model.Highlighting;
 using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Analysis.Util;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers.Classic;
@@ -457,12 +458,14 @@ public class Index : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(originalText);
 
         const string field = "whatever";
-        var analyzer = new StandardAnalyzer(LuceneVersion.LUCENE_48);
+
+        // don't use stop word list
+        var analyzer = new StandardAnalyzer(LuceneVersion.LUCENE_48, new CharArraySet(LuceneVersion.LUCENE_48, 0, true));
         var parser = new QueryParser(LuceneVersion.LUCENE_48, field, analyzer) { AllowLeadingWildcard = true, };
         var qry = parser.Parse(query);
         var scorer = new QueryScorer(qry, field);
 
-        // note: the lucene highlighter has been modified to work better and faster in our context
+        // note: the lucene highlighter has been modified to work simpler, better and faster at least in our context
         var highlighter = new Highlighter(scorer) { TextFragmenter = new SimpleFragmenter(0) };
 
         //var sw = Stopwatch.StartNew();
@@ -493,7 +496,6 @@ public class Index : INotifyPropertyChanged, IDisposable
         };
 
         var list = new List<T>();
-
         for (var i = 0; i < topDocs.ScoreDocs.Length; i++)
         {
             var doc = _searcher.Doc(topDocs.ScoreDocs[i].Doc);

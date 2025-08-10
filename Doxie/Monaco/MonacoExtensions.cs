@@ -2,11 +2,11 @@
 
 public static class MonacoExtensions
 {
+    public static JsonSerializerOptions SerializerOptions { get; } = new() { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     public static bool LanguagesLoaded { get; private set; }
 
     private static readonly ConcurrentDictionary<string, MonacoLanguageExtensionPoint> _languagesById = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, IReadOnlyList<MonacoLanguageExtensionPoint>> _languagesByExtension = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly JsonSerializerOptions _options = new() { PropertyNameCaseInsensitive = true };
     private static bool _loadingLanguages;
 
     public static async Task LoadLanguages(WebView2 webView)
@@ -28,7 +28,7 @@ public static class MonacoExtensions
         _loadingLanguages = true;
 
         var json = await webView.ExecuteScriptAsync("monaco.languages.getLanguages()");
-        var languages = JsonSerializer.Deserialize<MonacoLanguageExtensionPoint[]>(json, _options);
+        var languages = JsonSerializer.Deserialize<MonacoLanguageExtensionPoint[]>(json, SerializerOptions);
         if (languages != null)
         {
             foreach (var language in languages)
