@@ -1,7 +1,7 @@
 # Doxie
 A search engine, local to your machine, focused on source (or textual information) code.
 
-<img width="1003" height="801" alt="Screenshot 2025-08-10 175636" src="https://github.com/user-attachments/assets/a0ecb097-7bf4-458b-b88c-1f08764d287d" />
+<img width="1002" height="803" alt="image" src="https://github.com/user-attachments/assets/fbb72ff0-ccb2-4d8f-a905-ef7d818e2025" />
 
 # Indexing
 The application is written using the following technologies:
@@ -38,6 +38,7 @@ Other points of interest:
 * You can add sub-directories of a parent directory in one shot using the "Add multiple directories to index..." button.
 <img width="999" height="800" alt="image" src="https://github.com/user-attachments/assets/20ee2088-11e6-4669-8578-385281fa1604" />
 
+<img width="336" height="239" alt="image" src="https://github.com/user-attachments/assets/0a3311d9-0f10-4222-805c-ac4fbfa0073f" />
 
 # Querying
 The query window will give you the relative paths that matched the query, and you can click on a result and display the source. The source is supposed to be present on your machine (it's *not* stored in the index). Right clicking on a path will display a context menu that allows you to open it using the Windows Shell or open its containing folder.
@@ -48,4 +49,4 @@ By default, no wildcard is appended automatically in the query field, so when yo
 
 Since the index uses Lucene, you can refer to [Apache Lucene - Query Parser Syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html) for all query syntax options.
 
-<img width="1187" height="857" alt="Screenshot 2025-08-10 175737" src="https://github.com/user-attachments/assets/a76bd32e-debd-4565-b9c6-feb22d3d1df0" />
+<img width="1181" height="853" alt="image" src="https://github.com/user-attachments/assets/b3b6421d-1f7a-4cbd-850a-153f78411ed0" />
