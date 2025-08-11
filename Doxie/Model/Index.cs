@@ -133,11 +133,11 @@ public class Index : INotifyPropertyChanged, IDisposable
 
     protected virtual void UpdateSettings() => Extensions.WrapDispatcher(() =>
     {
-        Inclusions.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_inclusions), [_dbSeparator]).Select(InclusionDefinition.Parse).WhereNotNull());
+        Inclusions.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_inclusions), [_dbSeparator]).Select(InclusionDefinition.Deserialize).WhereNotNull());
         ExcludedDirectoryNames.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_excludedDirectoryNames), [_dbSeparator]));
     });
 
-    protected virtual void SaveInclusions() => _sqlDirectory.SaveSetting(_inclusions, string.Join(_dbSeparator, Inclusions));
+    protected virtual void SaveInclusions() => _sqlDirectory.SaveSetting(_inclusions, string.Join(_dbSeparator, Inclusions.Select(i => i.Serialize())));
     protected virtual void SaveExcludedDirectoryNames() => _sqlDirectory.SaveSetting(_excludedDirectoryNames, string.Join(_dbSeparator, ExcludedDirectoryNames));
     protected virtual void SaveDirectory(IndexDirectory dir)
     {
@@ -303,7 +303,20 @@ public class Index : INotifyPropertyChanged, IDisposable
                 continue;
 
             var ext = Path.GetExtension(entry).ToLowerInvariant();
-            if (!inclusions.Any(d => d.Matches(entry)))
+            if (ext == FileExtension) // never index doxie files
+            {
+                batch.NumberOfSkippedFiles++;
+                continue;
+            }
+
+            // run all exclusions first
+            if (inclusions.Where(i => i.Options.HasFlag(InclusionDefinitionOptions.ForceExclusion)).Any(d => d.Matches(entry)))
+            {
+                batch.NumberOfSkippedFiles++;
+                continue;
+            }
+
+            if (!inclusions.Where(i => !i.Options.HasFlag(InclusionDefinitionOptions.ForceExclusion)).Any(d => d.Matches(entry)))
             {
                 excludedExts.Add(ext);
                 batch.NumberOfSkippedFiles++;
@@ -635,7 +648,7 @@ public class Index : INotifyPropertyChanged, IDisposable
                 NumberOfSkippedFiles = NumberOfSkippedFiles,
             };
 
-            batch.Inclusions.AddRange(Conversions.SplitToNullifiedList(Inclusions, [_dbSeparator]).Select(InclusionDefinition.Parse).WhereNotNull());
+            batch.Inclusions.AddRange(Conversions.SplitToNullifiedList(Inclusions, [_dbSeparator]).Select(i => InclusionDefinition.Parse(i)).WhereNotNull());
             batch.ExcludedDirectoryNames.AddRange(Conversions.SplitToNullifiedList(ExcludedDirectoryNames, [_dbSeparator]));
             batch.NonIndexedFileExtensions.AddRange(Conversions.SplitToNullifiedList(NonIndexedFileExtensions, [_dbSeparator]));
             return batch;

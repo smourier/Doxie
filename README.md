@@ -15,7 +15,7 @@ An index is a .doxidx file which contains everything. This file is a SQLite file
 You can copy the .doxidx file somewhere else if file paths are valid in both places where you open Doxie.
 
 And index contains any number of indexed local directories, and all files in these directories are indexed using the same criteria:
-* The file's extension must be listed in the "Included file extensions" section.
+* The file's path or name must match one of items from ""File inclusions or exclusions" section.
 * The file's containing directory name must not be listed in the "Excluded directory names" section.
 
 To create an index you must:
@@ -24,7 +24,7 @@ To create an index you must:
 * Add one or more directories using the "Add a directory to index..." button, choose a directory
 * Click on this directory's "Scan" button in the list
 * The index will be created but by default, but no files will be put in it, since no file extensions are defined to be included in the index. Each time the directory is scanned, a "batch" will be associated (like a log of what happened). Older batch's related indexed data is deleted. Click on a directory to see its batches listed (latest first).
-* So, you can either add extensions specifically using the "Add..." in the "Included file extensions" section, or since the directory was scanned, use the "View" button in the "Non-Indexed file extensions" columns of the latest batch, and choose what extensions you want to add from there (file extensions are annotated with a "perceived" type that is more a hint):
+* So, you can either add extensions specifically using the "Add..." in the ""File inclusions or exclusions" section, or since the directory was scanned, use the "View" button in the "Non-Indexed file extensions" columns of the latest batch, and choose what extensions you want to add from there (file extensions are annotated with a "perceived" type that is more a hint):
 
 <img width="997" height="801" alt="image" src="https://github.com/user-attachments/assets/c1eafa9d-b216-4f70-b438-28f9ac7554f6" />
 
@@ -37,6 +37,8 @@ Other points of interest:
 * You can also exclude directory names from indexing, like "obj", "bin", "debug", "release", using the using the "Add..." in the "Excluded directory names" section.
 * You can add sub-directories of a parent directory in one shot using the "Add multiple directories to index..." button.
 <img width="999" height="800" alt="image" src="https://github.com/user-attachments/assets/20ee2088-11e6-4669-8578-385281fa1604" />
+
+If you want for example to index all .js files but no .min.js files, you can add ".js", and "*.min.js" (and check 'Is exclusion' for the later).
 
 
 # Querying

@@ -161,7 +161,7 @@
                 </Button>
 
             </StackPanel>
-            <GroupBox Grid.Row="2" Header="Inclusions (file extensions, etc.)">
+            <GroupBox Grid.Row="2" Header="File inclusions or exclusions (extensions, regex, etc.)">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />

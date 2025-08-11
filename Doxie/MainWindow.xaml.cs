@@ -178,7 +178,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (batch == null)
             return;
 
-        var list = new ListWindow(batch.Inclusions.Where(i => i.Options.HasFlag(InclusionDefinitionOptions.IsExtension)).Select(i => new ListItem(i.Extension!)))
+        var list = new ListWindow(batch.Inclusions.Where(i => i.Options.HasFlag(InclusionDefinitionOptions.IsExtension)).Select(i => new ListItem(i.Text)))
         {
             Owner = this,
             Title = "View Included File Extensions",
@@ -199,7 +199,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 if (definition.Options.HasFlag(InclusionDefinitionOptions.IsExtension))
                 {
-                    extensions.Remove(definition.Extension!);
+                    extensions.Remove(definition.Text);
                 }
             }
         }
@@ -315,10 +315,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (dlg.ShowDialog() == true)
         {
-            var text = dlg.Inclusion;
             if (Index != null)
             {
-                var definition = InclusionDefinition.Parse(text);
+                var definition = dlg.InclusionDefinition;
                 if (definition != null)
                 {
                     Index.EnsureInclusion(definition);
@@ -388,7 +387,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (def == null)
             return;
 
-        if (MessageBox.Show(this, $"Are you sure you want to remove the '{def}' extension?",
+        if (MessageBox.Show(this, $"Are you sure you want to remove the '{def}' inclusion definition?",
             AssemblyUtilities.GetProduct(),
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning,
