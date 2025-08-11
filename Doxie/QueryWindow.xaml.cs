@@ -8,7 +8,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private IndexSearchResultItem? _item;
     private int _totalHits;
     private readonly Task _webView2Initialized;
-    private readonly MonacolObject _eco = new();
+    private readonly MonacoObject _eco = new();
     private List<MonacoRange>? _highlightedRanges;
     private int _highlightedRangesIndex = -1;
     private LinesStream? _stream;
@@ -295,9 +295,16 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     {
         await _webView2Initialized;
 
-        if (filesList.SelectedItem is not IndexSearchResultItem item || item.Path == null || !IOUtilities.PathIsFile(item.Path))
+        if (filesList.SelectedItem is not IndexSearchResultItem item || item.Path == null)
         {
             Item = null;
+            return;
+        }
+
+        if (!IOUtilities.PathIsFile(item.Path))
+        {
+            Item = null;
+            ErrorMessage = $"Selected item file '{item.Path}' cannot be found.";
             return;
         }
 

@@ -3,7 +3,7 @@
 #pragma warning disable IDE1006 // Naming Styles
 
 [ComVisible(true)]
-public partial class MonacolObject
+public partial class MonacoObject
 {
     public event EventHandler<MonacoLoadEventArgs>? Load;
     public event EventHandler<MonacoEventArgs>? Event;

@@ -280,7 +280,7 @@ public class Index : INotifyPropertyChanged, IDisposable
             }
 
             var dirPath = Path.GetDirectoryName(entry);
-            if (dirPath != null)
+            if (dirPath != null && !dirPath.EqualsIgnoreCase(dir.Path)) // don't exclude the directory being indexed
             {
                 var dirName = Path.GetFileName(dirPath);
                 if (excludedDirs.Contains(dirName.ToLowerInvariant()))
@@ -630,9 +630,9 @@ public class Index : INotifyPropertyChanged, IDisposable
                 NumberOfSkippedFiles = NumberOfSkippedFiles,
             };
 
-            batch.IncludedFileExtensions.AddRange(IncludedFileExtensions?.Split(_dbSeparator) ?? []);
-            batch.ExcludedDirectoryNames.AddRange(ExcludedDirectoryNames?.Split(_dbSeparator) ?? []);
-            batch.NonIndexedFileExtensions.AddRange(NonIndexedFileExtensions?.Split(_dbSeparator) ?? []);
+            batch.IncludedFileExtensions.AddRange(Conversions.SplitToNullifiedList(IncludedFileExtensions, [_dbSeparator]));
+            batch.ExcludedDirectoryNames.AddRange(Conversions.SplitToNullifiedList(ExcludedDirectoryNames, [_dbSeparator]));
+            batch.NonIndexedFileExtensions.AddRange(Conversions.SplitToNullifiedList(NonIndexedFileExtensions, [_dbSeparator]));
             return batch;
         }
 
