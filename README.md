@@ -30,13 +30,17 @@ To create an index you must:
 
 Once you have added extensions, you can re-scan the directory all all directories using the "Scan all directories" button. Remember file extensions and directory exclusion settings are global to the index, so to all directories.
 
-
 Other points of interest:
 * Doxie reopens the last used index automatically when the app is ran.
 * All path treatments should be case-insensitive.
 * You can also exclude directory names from indexing, like "obj", "bin", "debug", "release", using the using the "Add..." in the "Excluded directory names" section.
 * You can add sub-directories of a parent directory in one shot using the "Add multiple directories to index..." button.
+
 <img width="999" height="800" alt="image" src="https://github.com/user-attachments/assets/20ee2088-11e6-4669-8578-385281fa1604" />
+
+
+If you want for example to index all .js files but no .min.js files, you can add ".js", and "\*.min.js" and check 'Is exclusion' for the later. Note "\*.min.js" starts with a "\*" wich means "end with .min.js", instead of using the file extension in Windows terms.
+
 
 <img width="336" height="239" alt="image" src="https://github.com/user-attachments/assets/0a3311d9-0f10-4222-805c-ac4fbfa0073f" />
 
