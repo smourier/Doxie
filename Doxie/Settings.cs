@@ -6,6 +6,7 @@ public class Settings : Serializable<Settings>
     public const string PerceivedTypesFileName = "perceivedTypes.json";
 
     public static Settings Current { get; }
+    public static string WebView2UserDataPath { get; }
     public static string ConfigurationFilePath { get; }
     public static string PerceivedTypesFilePath { get; }
     public static string TempDirectoryPath { get; }
@@ -18,6 +19,7 @@ public class Settings : Serializable<Settings>
         ConfigurationFilePath = Path.Combine(path, FileName);
         PerceivedTypesFilePath = Path.Combine(path, PerceivedTypesFileName);
         TempDirectoryPath = Path.Combine(Path.GetTempPath(), typeof(Settings).Namespace!);
+        WebView2UserDataPath = Path.Combine(path, "WebView2");
 
         // build settings
         Current = Deserialize(ConfigurationFilePath)!;

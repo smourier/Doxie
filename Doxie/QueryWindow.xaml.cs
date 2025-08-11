@@ -34,7 +34,8 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
         InitializeComponent();
         webView.CoreWebView2InitializationCompleted += CoreWebView2InitializationCompleted;
-        _webView2Initialized = webView.EnsureCoreWebView2Async();
+        var env = CoreWebView2Environment.CreateAsync(userDataFolder: Settings.WebView2UserDataPath);
+        _webView2Initialized = webView.EnsureCoreWebView2Async(env.Result);
         DataContext = this;
     }
 
