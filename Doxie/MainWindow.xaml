@@ -161,28 +161,28 @@
                 </Button>
 
             </StackPanel>
-            <GroupBox Grid.Row="2" Header="Included file extensions">
+            <GroupBox Grid.Row="2" Header="Inclusions (file extensions, etc.)">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition />
                     </Grid.ColumnDefinitions>
                     <Button
-                        x:Name="addIncludedExt"
+                        x:Name="addInclusion"
                         Margin="5"
-                        Click="AddIncludedExt_Click">
+                        Click="AddInclusion_Click">
                         Add...
                     </Button>
                     <ItemsControl
                         Grid.Column="1"
                         VerticalAlignment="Center"
-                        ItemsSource="{Binding Index.IncludedFileExtensions}">
+                        ItemsSource="{Binding Index.Inclusions}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button
-                                    x:Name="removeIncludedExt"
+                                    x:Name="removeInclusion"
                                     Background="Transparent"
-                                    Click="RemoveIncludedExt_Click"
+                                    Click="RemoveInclusion_Click"
                                     Content="{Binding}"
                                     ToolTip="Click to remove" />
                             </DataTemplate>
@@ -416,7 +416,7 @@
                                     <Button
                                         x:Name="viewIncludedExts"
                                         Margin="5"
-                                        Click="ViewIncludedExts_Click"
+                                        Click="ViewInclusions_Click"
                                         IsEnabled="{Binding IncludedFileExtensions, Converter={StaticResource CountToBooleanConverter}}">
                                         View
                                     </Button>

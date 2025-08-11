@@ -22,7 +22,7 @@ public class Index : INotifyPropertyChanged, IDisposable
 
     // database settings
     private const string _version = "version";
-    private const string _includedFileExtensions = "includedFileExtensions";
+    private const string _inclusions = "inclusions";
     private const string _excludedDirectoryNames = "excludedDirectoryNames";
     private const char _dbSeparator = '|';
 
@@ -75,7 +75,7 @@ public class Index : INotifyPropertyChanged, IDisposable
     }
 
     public ObservableCollection<IndexDirectory> Directories { get; } = [];
-    public ObservableCollection<string> IncludedFileExtensions { get; } = [];
+    public ObservableCollection<InclusionDefinition> Inclusions { get; } = [];
     public ObservableCollection<string> ExcludedDirectoryNames { get; } = [];
 
     public long FileSize
@@ -133,11 +133,11 @@ public class Index : INotifyPropertyChanged, IDisposable
 
     protected virtual void UpdateSettings() => Extensions.WrapDispatcher(() =>
     {
-        IncludedFileExtensions.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_includedFileExtensions), [_dbSeparator]));
+        Inclusions.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_inclusions), [_dbSeparator]).Select(InclusionDefinition.Parse).WhereNotNull());
         ExcludedDirectoryNames.AddRange(Conversions.SplitToNullifiedList(_sqlDirectory.LoadNullifiedSetting(_excludedDirectoryNames), [_dbSeparator]));
     });
 
-    protected virtual void SaveIncludedFileExtensions() => _sqlDirectory.SaveSetting(_includedFileExtensions, string.Join(_dbSeparator, IncludedFileExtensions));
+    protected virtual void SaveInclusions() => _sqlDirectory.SaveSetting(_inclusions, string.Join(_dbSeparator, Inclusions));
     protected virtual void SaveExcludedDirectoryNames() => _sqlDirectory.SaveSetting(_excludedDirectoryNames, string.Join(_dbSeparator, ExcludedDirectoryNames));
     protected virtual void SaveDirectory(IndexDirectory dir)
     {
@@ -179,24 +179,20 @@ public class Index : INotifyPropertyChanged, IDisposable
         return true;
     });
 
-    public virtual bool RemoveIncludedFileExtension(string ext) => Extensions.WrapDispatcher(() =>
+    public virtual bool RemoveInclusion(InclusionDefinition definition) => Extensions.WrapDispatcher(() =>
     {
-        ArgumentNullException.ThrowIfNull(ext);
-        if (!ext.StartsWith('.'))
-        {
-            ext = '.' + ext;
-        }
+        ArgumentNullException.ThrowIfNull(definition);
 
-        if (!IncludedFileExtensions.Any(n => n.EqualsIgnoreCase(ext)))
+        if (!Inclusions.Any(n => n.Equals(definition)))
             return false;
 
-        IncludedFileExtensions.Remove(ext);
-        SaveIncludedFileExtensions();
-        OnPropertyChanged(nameof(IncludedFileExtensions));
+        Inclusions.Remove(definition);
+        SaveInclusions();
+        OnPropertyChanged(nameof(Inclusions));
         return true;
     });
 
-    public virtual bool EnsureIncludedFileExtension(string ext) => Extensions.WrapDispatcher(() =>
+    public bool EnsureIncludedFileExtension(string ext)
     {
         ArgumentNullException.ThrowIfNull(ext);
         if (!ext.StartsWith('.'))
@@ -204,15 +200,25 @@ public class Index : INotifyPropertyChanged, IDisposable
             ext = '.' + ext;
         }
 
-        if (IncludedFileExtensions.Any(n => n.EqualsIgnoreCase(ext)))
+        var inclusion = InclusionDefinition.Parse(ext);
+        if (inclusion == null)
+            return false;
+
+        return EnsureInclusion(inclusion);
+    }
+
+    public virtual bool EnsureInclusion(InclusionDefinition definition) => Extensions.WrapDispatcher(() =>
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        if (Inclusions.Any(n => n.Equals(definition)))
         {
-            SaveIncludedFileExtensions();
+            SaveInclusions();
             return false;
         }
 
-        IncludedFileExtensions.Add(ext);
-        SaveIncludedFileExtensions();
-        OnPropertyChanged(nameof(IncludedFileExtensions));
+        Inclusions.Add(definition);
+        SaveInclusions();
+        OnPropertyChanged(nameof(Inclusions));
         return true;
     });
 
@@ -256,7 +262,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         SaveDirectoryBatch(batch);
         UpdateDirectories();
 
-        var includedExts = (IncludedFileExtensions?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
+        var inclusions = (Inclusions ?? []).ToHashSet();
         var excludedDirs = (ExcludedDirectoryNames?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
         var excludedExts = new HashSet<string>();
 
@@ -290,15 +296,14 @@ public class Index : INotifyPropertyChanged, IDisposable
                 }
             }
 
-            var ext = Path.GetExtension(entry).ToLowerInvariant();
-
             batch.EndTimeUtc = DateTime.UtcNow;
             var e = new IndexingEventArgs(batch, entry);
             OnFileIndexing(this, e);
             if (e.Cancel)
                 continue;
 
-            if (!includedExts.Contains(ext))
+            var ext = Path.GetExtension(entry).ToLowerInvariant();
+            if (!inclusions.Any(d => d.Matches(entry)))
             {
                 excludedExts.Add(ext);
                 batch.NumberOfSkippedFiles++;
@@ -333,7 +338,7 @@ public class Index : INotifyPropertyChanged, IDisposable
 
         batch.EndTimeUtc = DateTime.UtcNow;
         batch.NonIndexedFileExtensions.AddRange(excludedExts);
-        batch.IncludedFileExtensions.AddRange(includedExts);
+        batch.Inclusions.AddRange(inclusions);
         batch.ExcludedDirectoryNames.AddRange(excludedDirs);
         SaveDirectoryBatch(batch);
         UpdateDirectories();
@@ -610,7 +615,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         public DateTime EndTimeUtc { get; set; }
         public int NumberOfDocuments { get; set; }
         public int NumberOfSkippedFiles { get; set; }
-        public string? IncludedFileExtensions { get; set; }
+        public string? Inclusions { get; set; }
         public string? ExcludedDirectoryNames { get; set; }
         public string? NonIndexedFileExtensions { get; set; }
 
@@ -630,7 +635,7 @@ public class Index : INotifyPropertyChanged, IDisposable
                 NumberOfSkippedFiles = NumberOfSkippedFiles,
             };
 
-            batch.IncludedFileExtensions.AddRange(Conversions.SplitToNullifiedList(IncludedFileExtensions, [_dbSeparator]));
+            batch.Inclusions.AddRange(Conversions.SplitToNullifiedList(Inclusions, [_dbSeparator]).Select(InclusionDefinition.Parse).WhereNotNull());
             batch.ExcludedDirectoryNames.AddRange(Conversions.SplitToNullifiedList(ExcludedDirectoryNames, [_dbSeparator]));
             batch.NonIndexedFileExtensions.AddRange(Conversions.SplitToNullifiedList(NonIndexedFileExtensions, [_dbSeparator]));
             return batch;
@@ -645,7 +650,7 @@ public class Index : INotifyPropertyChanged, IDisposable
             EndTimeUtc = batch.EndTimeUtc,
             NumberOfDocuments = batch.NumberOfDocuments,
             NumberOfSkippedFiles = batch.NumberOfSkippedFiles,
-            IncludedFileExtensions = string.Join(_dbSeparator, batch.IncludedFileExtensions),
+            Inclusions = string.Join(_dbSeparator, batch.Inclusions),
             ExcludedDirectoryNames = string.Join(_dbSeparator, batch.ExcludedDirectoryNames),
             NonIndexedFileExtensions = string.Join(_dbSeparator, batch.NonIndexedFileExtensions),
         };

@@ -172,13 +172,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-    private void ViewIncludedExts_Click(object sender, RoutedEventArgs e)
+    private void ViewInclusions_Click(object sender, RoutedEventArgs e)
     {
         var batch = sender.GetDataContext<IndexDirectoryBatch>();
         if (batch == null)
             return;
 
-        var list = new ListWindow(batch.IncludedFileExtensions.Select(ext => new ListItem(ext)))
+        var list = new ListWindow(batch.Inclusions.Where(i => i.Options.HasFlag(InclusionDefinitionOptions.IsExtension)).Select(i => new ListItem(i.Extension!)))
         {
             Owner = this,
             Title = "View Included File Extensions",
@@ -195,9 +195,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var extensions = batch.NonIndexedFileExtensions.ToHashSet();
         if (Index != null)
         {
-            foreach (var extension in Index.IncludedFileExtensions)
+            foreach (var definition in Index.Inclusions)
             {
-                extensions.Remove(extension);
+                if (definition.Options.HasFlag(InclusionDefinitionOptions.IsExtension))
+                {
+                    extensions.Remove(definition.Extension!);
+                }
             }
         }
 
@@ -208,8 +211,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Description = getDesc(e),
             Action = () =>
             {
-                Index?.EnsureIncludedFileExtension(e);
-                return true;
+                var def = InclusionDefinition.Parse(e);
+                if (def != null)
+                {
+                    Index?.EnsureInclusion(def);
+                    return true;
+                }
+                return false;
             }
         }))
         {
@@ -296,7 +304,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void AddIncludedExt_Click(object sender, RoutedEventArgs e)
+    private void AddInclusion_Click(object sender, RoutedEventArgs e)
     {
         if (Index == null)
             return;
@@ -307,10 +315,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (dlg.ShowDialog() == true)
         {
-            var ext = dlg.Extension;
-            if (!string.IsNullOrWhiteSpace(ext) && Index != null)
+            var text = dlg.Inclusion;
+            if (Index != null)
             {
-                Index.EnsureIncludedFileExtension(ext);
+                var definition = InclusionDefinition.Parse(text);
+                if (definition != null)
+                {
+                    Index.EnsureInclusion(definition);
+                }
             }
         }
     }
@@ -370,20 +382,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnDirectoriesSelectionChanged(null!, null!);
     }
 
-    private void RemoveIncludedExt_Click(object sender, RoutedEventArgs e)
+    private void RemoveInclusion_Click(object sender, RoutedEventArgs e)
     {
-        var ext = sender.GetDataContext<string>();
-        if (ext == null)
+        var def = sender.GetDataContext<InclusionDefinition>();
+        if (def == null)
             return;
 
-        if (MessageBox.Show(this, $"Are you sure you want to remove the '{ext}' extension?",
+        if (MessageBox.Show(this, $"Are you sure you want to remove the '{def}' extension?",
             AssemblyUtilities.GetProduct(),
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning,
             MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
 
-        Index?.RemoveIncludedFileExtension(ext);
+        Index?.RemoveInclusion(def);
     }
 
     private void RemoveDirectoryName_Click(object sender, RoutedEventArgs e)

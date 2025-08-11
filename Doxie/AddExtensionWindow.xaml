@@ -5,12 +5,12 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:Doxie"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Add Included Extension"
+    Title="Add Inclusion"
     Width="300"
     Height="150"
     MinWidth="300"
     MinHeight="150"
-    FocusManager.FocusedElement="{Binding ElementName=extension}"
+    FocusManager.FocusedElement="{Binding ElementName=inclusion}"
     FontFamily="Consolas"
     FontSize="12"
     ResizeMode="CanResizeWithGrip"
@@ -31,15 +31,15 @@
         <TextBlock
             Margin="10"
             VerticalAlignment="Center"
-            Text="Extension" />
+            Text="Definition" />
         <TextBox
-            x:Name="extension"
+            x:Name="inclusion"
             Grid.ColumnSpan="3"
             Height="30"
             Margin="80,0,15,0"
             MaxLines="1"
-            Text="{Binding Extension, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-            TextChanged="Extension_TextChanged" />
+            Text="{Binding Inclusion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            TextChanged="Inclusion_TextChanged" />
 
         <Button
             x:Name="ok"

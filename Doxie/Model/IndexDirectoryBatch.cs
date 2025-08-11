@@ -13,7 +13,7 @@ public class IndexDirectoryBatch(IndexDirectory directory, Guid id) : INotifyPro
 
     public IndexDirectory Directory { get; } = directory ?? throw new ArgumentNullException(nameof(directory));
     public Guid Id { get; } = id;
-    public ObservableCollection<string> IncludedFileExtensions { get; } = [];
+    public ObservableCollection<InclusionDefinition> Inclusions { get; } = [];
     public ObservableCollection<string> ExcludedDirectoryNames { get; } = [];
     public ObservableCollection<string> NonIndexedFileExtensions { get; } = [];
     public TimeSpan Duration => EndTimeUtc - StartTimeUtc;
@@ -116,7 +116,7 @@ public class IndexDirectoryBatch(IndexDirectory directory, Guid id) : INotifyPro
         NumberOfDocuments = other.NumberOfDocuments;
         NumberOfSkippedFiles = other.NumberOfSkippedFiles;
         NumberOfSkippedDirectories = other.NumberOfSkippedDirectories;
-        IncludedFileExtensions.UpdateWith(other.IncludedFileExtensions, null, StringComparer.OrdinalIgnoreCase);
+        Inclusions.UpdateWith(other.Inclusions);
         ExcludedDirectoryNames.UpdateWith(other.ExcludedDirectoryNames, null, StringComparer.OrdinalIgnoreCase);
         NonIndexedFileExtensions.UpdateWith(other.NonIndexedFileExtensions, null, StringComparer.OrdinalIgnoreCase);
     }

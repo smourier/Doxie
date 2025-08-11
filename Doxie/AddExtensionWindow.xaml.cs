@@ -9,9 +9,9 @@ public partial class AddExtensionWindow : Window
         UpdateControls();
     }
 
-    public string? Extension { get; set; }
+    public string? Inclusion { get; set; }
 
-    private void UpdateControls() => ok.IsEnabled = !string.IsNullOrWhiteSpace(Extension);
+    private void UpdateControls() => ok.IsEnabled = InclusionDefinition.Parse(Inclusion) != null;
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
@@ -35,5 +35,5 @@ public partial class AddExtensionWindow : Window
         Close();
     }
 
-    private void Extension_TextChanged(object sender, TextChangedEventArgs e) => UpdateControls();
+    private void Inclusion_TextChanged(object sender, TextChangedEventArgs e) => UpdateControls();
 }
