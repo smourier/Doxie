@@ -7,7 +7,7 @@ A search engine, local to your machine, focused on source (or textual informatio
 The application is written using the following technologies:
 
 * .NET 9
-* WPF (dark mode) for the UI framework
+* WPF (dark mode, high DPI support) for the UI framework
 * Lucene.NET for  the indexing and querying engine
 * SQLite (through [SQLNado](https://github.com/smourier/SQLNado))
 
@@ -32,10 +32,13 @@ Once you have added inclusion (and maybe exclusions) patterns, you can re-scan a
 
 Other points of interest:
 * Doxie reopens the last used index automatically when the app is ran.
+* You can also drag & drop a .doxidx file on Doxie's window to open it.
+* From command line, you can also run `"doxie.exe <some file path>"` to open it.
 * All path treatments should be case-insensitive.
 * You can also exclude directory names from indexing, like "obj", "bin", "debug", "release", using the using the "Add..." in the "Excluded directory names" section.
 * You can add sub-directories of a parent directory in one shot using the "Add multiple directories to index..." button.
 * To re-use inclusions/exclusions pattern sets, you can copy a doxidx file somewhere else, open it and remove all directories from there.
+* You can use the Doxie project as a .NET reference and write other tools. Check the Doxie.Cli project for a small sample of this.
 
 <img width="999" height="800" alt="image" src="https://github.com/user-attachments/assets/20ee2088-11e6-4669-8578-385281fa1604" />
 

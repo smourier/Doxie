@@ -5,4 +5,5 @@
 6. rename the zippped files as "vs.<version>.zip", for example "vs.0.44.0.zip"
 7. delete the old vsxxx.zip and put the new one
 8. make sure the new one (for example)'s action in Visual Studio properties is still "Embedded resource"
-9. make sure vs\language\typescript\tsWorker.js is in there or change the code in EditorControl that checks for it
+
+9. make sure vs\language\typescript\tsWorker.js is in there or change the code in MonacoResources.cs that checks for it
