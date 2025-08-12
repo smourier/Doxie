@@ -7,7 +7,7 @@ A search engine, local to your machine, focused on source (or textual informatio
 The application is written using the following technologies:
 
 * .NET 9
-* WPF (dark mode) for the UI framework
+* WPF (dark mode, high Dpi support) for the UI framework
 * Lucene.NET for  the indexing and querying engine
 * SQLite (through [SQLNado](https://github.com/smourier/SQLNado))
 
