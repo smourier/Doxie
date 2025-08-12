@@ -32,6 +32,8 @@ Once you have added inclusion (and maybe exclusions) patterns, you can re-scan a
 
 Other points of interest:
 * Doxie reopens the last used index automatically when the app is ran.
+* You can also drag & drop a .doxidx file on Doxie's window to open it.
+* From command line, you can also run `"doxie.exe <some file path>"` to open it.
 * All path treatments should be case-insensitive.
 * You can also exclude directory names from indexing, like "obj", "bin", "debug", "release", using the using the "Add..." in the "Excluded directory names" section.
 * You can add sub-directories of a parent directory in one shot using the "Add multiple directories to index..." button.
