@@ -9,7 +9,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         InitializeComponent();
 
         DataContext = this;
-        _ = Task.Run(Settings.Current.CleanRecentFiles);
 
         var firstArg = CommandLine.GetNullifiedArgument(0);
         if (!string.IsNullOrWhiteSpace(firstArg) && IOUtilities.PathIsFile(firstArg))
@@ -25,6 +24,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         }
 
+        _ = Task.Run(Settings.Current.CleanRecentFiles);
         // used in dev mode for extracing WPF default styles
         //Extensions.SaveDefaultTemplate<GridSplitter>();
     }
@@ -57,10 +57,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             MessageBox.Show(this, $"Failed to open index file: {ex.GetInterestingExceptionMessage()}", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Error);
+            Settings.Current.RemoveFromRecentFiles(filePath);
             return;
 
         }
-        Settings.Current.AddRecentFile(filePath);
+        Settings.Current.AddToRecentFiles(filePath);
         OnPropertyChanged(nameof(RecentFiles));
         Index?.Dispose();
         Index = index;

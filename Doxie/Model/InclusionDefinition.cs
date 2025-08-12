@@ -17,13 +17,14 @@ public class InclusionDefinition : IEquatable<InclusionDefinition>
         });
     }
 
+    public bool IsExclusion => Options.HasFlag(InclusionDefinitionOptions.ForceExclusion);
     public InclusionDefinitionOptions Options { get; private set; }
     public string Text { get; }
     public string Description
     {
         get
         {
-            var exclusionText = Options.HasFlag(InclusionDefinitionOptions.ForceExclusion) ? "Excludes" : "Includes";
+            var exclusionText = IsExclusion ? "Excludes" : "Includes";
             if (Options.HasFlag(InclusionDefinitionOptions.IsExtension))
                 return $"{exclusionText} file names with extension '.{Text}'";
 
@@ -40,7 +41,7 @@ public class InclusionDefinition : IEquatable<InclusionDefinition>
     public override string ToString()
     {
         var str = toString();
-        if (Options.HasFlag(InclusionDefinitionOptions.ForceExclusion))
+        if (IsExclusion)
             return "!" + str;
 
         return str;
@@ -108,7 +109,7 @@ public class InclusionDefinition : IEquatable<InclusionDefinition>
             return null;
 
         var def = parse();
-        if (def != null && options.HasFlag(InclusionDefinitionOptions.ForceExclusion))
+        if (def != null && def.IsExclusion)
         {
             def.Options |= InclusionDefinitionOptions.ForceExclusion;
         }

@@ -14,6 +14,7 @@
         <utilities:StringJoinConverter x:Key="StringJoinConverter" />
         <utilities:CountConverter x:Key="CountConverter" />
         <utilities:EnumDisplayConverter x:Key="EnumDisplayConverter" />
+        <utilities:BooleanToParameterConverter x:Key="BooleanToParameterConverter" />
         <SolidColorBrush x:Key="ListViewItemPillFillBrush" Color="#784424" />
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#784424" />
         <CornerRadius x:Key="ControlCornerRadius">5</CornerRadius>

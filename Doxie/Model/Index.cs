@@ -310,13 +310,13 @@ public class Index : INotifyPropertyChanged, IDisposable
             }
 
             // run all exclusions first
-            if (inclusions.Where(i => i.Options.HasFlag(InclusionDefinitionOptions.ForceExclusion)).Any(d => d.Matches(entry)))
+            if (inclusions.Where(i => i.IsExclusion).Any(d => d.Matches(entry)))
             {
                 batch.NumberOfSkippedFiles++;
                 continue;
             }
 
-            if (!inclusions.Where(i => !i.Options.HasFlag(InclusionDefinitionOptions.ForceExclusion)).Any(d => d.Matches(entry)))
+            if (!inclusions.Where(i => !i.IsExclusion).Any(d => d.Matches(entry)))
             {
                 excludedExts.Add(ext);
                 batch.NumberOfSkippedFiles++;

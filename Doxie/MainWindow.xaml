@@ -8,8 +8,8 @@
     xmlns:model="clr-namespace:Doxie.Model"
     Title="Doxie"
     Width="1000"
-    AllowDrop="True"
     Height="800"
+    AllowDrop="True"
     FontFamily="Consolas"
     FontSize="12"
     WindowStartupLocation="CenterScreen"
@@ -179,10 +179,10 @@
                         VerticalAlignment="Center"
                         ItemsSource="{Binding Index.Inclusions}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate DataType="model:InclusionDefinition">
                                 <Button
                                     x:Name="removeInclusion"
-                                    Background="Transparent"
+                                    Background="{Binding IsExclusion, Converter={StaticResource BooleanToParameterConverter}, ConverterParameter=#770000}"
                                     Click="RemoveInclusion_Click"
                                     Content="{Binding}"
                                     ToolTip="Click to remove" />

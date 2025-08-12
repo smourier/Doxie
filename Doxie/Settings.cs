@@ -93,7 +93,7 @@ public class Settings : Serializable<Settings>
     [DefaultValue(EncodingDetectorMode.AutoDetect)]
     public virtual EncodingDetectorMode EncodingDetectorMode { get => GetPropertyValue(EncodingDetectorMode.AutoDetect); set { SetPropertyValue(value); } }
 
-    private Dictionary<string, DateTime> GetRecentFiles()
+    private Dictionary<string, DateTime> GetRecentFiles(bool checkExists = true)
     {
         var dic = new Dictionary<string, DateTime>(StringComparer.Ordinal);
         foreach (var recent in RecentFiles)
@@ -101,7 +101,7 @@ public class Settings : Serializable<Settings>
             if (recent?.FilePath == null)
                 continue;
 
-            if (!IOUtilities.PathIsFile(recent.FilePath))
+            if (checkExists && !IOUtilities.PathIsFile(recent.FilePath))
                 continue;
 
             dic[recent.FilePath] = recent.LastAccessTime;
@@ -129,7 +129,7 @@ public class Settings : Serializable<Settings>
         SerializeToConfiguration();
     }
 
-    public void AddRecentFile(string filePath)
+    public void AddToRecentFiles(string filePath)
     {
         ArgumentNullException.ThrowIfNull(filePath);
         if (!IOUtilities.PathIsFile(filePath))
@@ -139,5 +139,17 @@ public class Settings : Serializable<Settings>
         dic[filePath] = DateTime.Now;
         SaveRecentFiles(dic);
         SerializeToConfiguration();
+    }
+
+    public bool RemoveFromRecentFiles(string filePath)
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+        var dic = GetRecentFiles(false);
+        if (!dic.Remove(filePath))
+            return false;
+
+        SaveRecentFiles(dic);
+        SerializeToConfiguration();
+        return true;
     }
 }
