@@ -15,7 +15,7 @@ An index is a .doxidx file which contains everything. This file is a SQLite file
 You can copy the .doxidx file somewhere else if file paths are valid in both places where you open Doxie.
 
 And index contains any number of indexed local directories, and all files in these directories are indexed using the same criteria:
-* The file's path or name must match one of items from ""File inclusions or exclusions" section.
+* The file's path or name must match one of items from ""File inclusions or exclusions" section. If this item is an exclusion criteria, it must not match it.
 * The file's containing directory name must not be listed in the "Excluded directory names" section.
 
 To create an index you must:
@@ -28,13 +28,14 @@ To create an index you must:
 
 <img width="997" height="801" alt="image" src="https://github.com/user-attachments/assets/c1eafa9d-b216-4f70-b438-28f9ac7554f6" />
 
-Once you have added extensions, you can re-scan the directory all all directories using the "Scan all directories" button. Remember file extensions and directory exclusion settings are global to the index, so to all directories.
+Once you have added inclusion (and maybe exclusions) patterns, you can re-scan a specific directory or all directories using the "Scan all directories" button. Remember inclusions/exclusons and directory exclusion settings are global to the index, so to all directories.
 
 Other points of interest:
 * Doxie reopens the last used index automatically when the app is ran.
 * All path treatments should be case-insensitive.
 * You can also exclude directory names from indexing, like "obj", "bin", "debug", "release", using the using the "Add..." in the "Excluded directory names" section.
 * You can add sub-directories of a parent directory in one shot using the "Add multiple directories to index..." button.
+* To re-use inclusions/exclusions pattern sets, you can copy a doxidx file somewhere else, open it and remove all directories from there.
 
 <img width="999" height="800" alt="image" src="https://github.com/user-attachments/assets/20ee2088-11e6-4669-8578-385281fa1604" />
 
