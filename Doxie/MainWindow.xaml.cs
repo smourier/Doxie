@@ -11,12 +11,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         DataContext = this;
         _ = Task.Run(Settings.Current.CleanRecentFiles);
 
-        //Extensions.SaveDefaultTemplate<GridSplitter>();
-        var lastRecent = Settings.Current.RecentFiles.FirstOrDefault()?.FilePath;
-        if (lastRecent != null)
+        var firstArg = CommandLine.GetNullifiedArgument(0);
+        if (!string.IsNullOrWhiteSpace(firstArg) && IOUtilities.PathIsFile(firstArg))
         {
-            OpenIndex(lastRecent);
+            OpenIndex(firstArg);
         }
+        else
+        {
+            var lastRecent = Settings.Current.RecentFiles.FirstOrDefault()?.FilePath;
+            if (lastRecent != null)
+            {
+                OpenIndex(lastRecent);
+            }
+        }
+
+        // used in dev mode for extracing WPF default styles
+        //Extensions.SaveDefaultTemplate<GridSplitter>();
     }
 
     public Model.Index? Index { get; private set; }
@@ -473,5 +483,38 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
 
         Extensions.OpenInExplorer(dir.Path);
+    }
+
+    private static string? GetDoxieFile(DragEventArgs e)
+    {
+        if (e.Data == null || !e.Data.GetFormats().Any(f => f == DataFormats.FileDrop))
+            return null;
+
+        var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+        if (files.Length == 0 ||
+            !Path.GetExtension(files[0]).EqualsIgnoreCase(Model.Index.FileExtension) ||
+            !IOUtilities.PathIsFile(files[0]))
+            return null;
+
+        return files[0];
+    }
+
+    protected override void OnDragOver(DragEventArgs e)
+    {
+        base.OnDragOver(e);
+        var file = GetDoxieFile(e);
+        e.Effects = file != null ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    protected override void OnDrop(DragEventArgs e)
+    {
+        base.OnDrop(e);
+        var file = GetDoxieFile(e);
+        if (file != null)
+        {
+            OpenIndex(file);
+        }
+        e.Handled = true;
     }
 }

@@ -8,6 +8,7 @@
     xmlns:model="clr-namespace:Doxie.Model"
     Title="Doxie"
     Width="1000"
+    AllowDrop="True"
     Height="800"
     FontFamily="Consolas"
     FontSize="12"
