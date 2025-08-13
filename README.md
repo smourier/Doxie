@@ -45,8 +45,11 @@ Other points of interest:
 
 If you want for example to index all .js files but no .min.js files, you can add ".js", and "\*.min.js" and check 'Is exclusion' for the later. Note "\*.min.js" starts with a "\*" wich means "end with .min.js", instead of using the file extension in Windows terms.
 
-
 <img width="336" height="239" alt="image" src="https://github.com/user-attachments/assets/0a3311d9-0f10-4222-805c-ac4fbfa0073f" />
+
+Exclusions are shown with a red background:
+
+<img width="463" height="213" alt="image" src="https://github.com/user-attachments/assets/c22a6354-483f-44cd-be78-f9ee6dee691f" />
 
 # Querying
 The query window will give you the relative paths that matched the query, and you can click on a result and display the source. The source is supposed to be present on your machine (it's *not* stored in the index). Right clicking on a path will display a context menu that allows you to open it using the Windows Shell or open its containing folder.
@@ -55,6 +58,12 @@ The selected source code is displayed using the [Monaco Editor](https://microsof
 
 By default, no wildcard is appended automatically in the query field, so when you type "IShellItem", it will only match "IShellItem" words in the index. Just use "IShellItem*" to match all texts starting with "IShellItem". You can also use a leading wildcard, ie: "\*IShellItem*".
 
+<img width="1181" height="853" alt="image" src="https://github.com/user-attachments/assets/b3b6421d-1f7a-4cbd-850a-153f78411ed0" />
+
 Since the index uses Lucene, you can refer to [Apache Lucene - Query Parser Syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html) for all query syntax options.
 
-<img width="1181" height="853" alt="image" src="https://github.com/user-attachments/assets/b3b6421d-1f7a-4cbd-850a-153f78411ed0" />
+For example in the following example, the "embedded sample code AND path:rea\*" query will search on various texts and on the relative path (parsed as a list of tokens). Note the AND token *must* be UPPERCASE for it to work:
+
+<img width="1278" height="820" alt="Screenshot 2025-08-13 130624" src="https://github.com/user-attachments/assets/96016ea6-d523-4e03-9297-aaa71d289a97" />
+
+Available text fields are "path" (the relative path) and "ext" (the file's extension).
