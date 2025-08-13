@@ -58,6 +58,11 @@
             Orientation="Horizontal"
             Visibility="{Binding IsSortPanelEnabled, Converter={StaticResource BoolToVis}}">
             <Button
+                x:Name="copy"
+                Click="Copy_Click"
+                Content="{Binding CopyButtonText}"
+                Visibility="{Binding IsCopyButtonVisible, Converter={StaticResource BoolToVis}}" />
+            <Button
                 x:Name="sortByName"
                 Click="SortByName_Click"
                 Content="{Binding SortByNameButtonText}"

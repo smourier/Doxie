@@ -59,7 +59,6 @@ public class Index : INotifyPropertyChanged, IDisposable
     public string FilePath => _sqlDirectory.Database.FilePath;
     public string? Version => _sqlDirectory.LoadNullifiedSetting(_version);
     public string Name => Path.GetFileNameWithoutExtension(_sqlDirectory.Database.FilePath);
-    public bool VacuumOnCommit { get; set; } = true;
     public bool IsReadOnly => _writer == null;
     public bool IsWriteOnly => !IsReadOnly;
     public bool IsIndexing { get; private set; }
@@ -152,17 +151,15 @@ public class Index : INotifyPropertyChanged, IDisposable
     {
         ArgumentNullException.ThrowIfNull(path);
         var dir = Directories.FirstOrDefault(n => n.Path.EqualsIgnoreCase(path));
-        if (dir == null)
+        dir ??= WithTransaction(() =>
         {
             var max = _sqlDirectory.Database.ExecuteScalar($"SELECT MAX({nameof(Directory.Id)}) FROM {nameof(Directory)}", 0);
             dir = new IndexDirectory(this, max + 1, path);
             SaveDirectory(dir);
-            Extensions.WrapDispatcher(() =>
-            {
-                Directories.Add(dir);
-                OnPropertyChanged(nameof(Directories));
-            });
-        }
+            Directories.Add(dir);
+            OnPropertyChanged(nameof(Directories));
+            return dir;
+        });
         return dir;
     });
 
@@ -249,125 +246,163 @@ public class Index : INotifyPropertyChanged, IDisposable
         return true;
     });
 
+    public virtual bool Vacuum()
+    {
+        try
+        {
+            _sqlDirectory.Database.Vacuum();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     protected virtual void DoScan(IndexScanRequest request, IndexScanResult result)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
 
         var dir = EnsureDirectory(request.InputDirectory.Path);
+        DeleteDocuments(dir);
         var batch = new IndexDirectoryBatch(request.InputDirectory, Guid.NewGuid())
         {
             StartTimeUtc = DateTime.UtcNow
         };
-        SaveDirectoryBatch(batch);
-        UpdateDirectories();
 
-        var inclusions = (Inclusions ?? []).ToHashSet();
-        var excludedDirs = (ExcludedDirectoryNames?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
-        var excludedExts = new HashSet<string>();
-
-        var writer = GetWriter();
-        foreach (var entry in System.IO.Directory.EnumerateFileSystemEntries(request.InputDirectory.Path, request.SearchPattern, request.EnumerationOptions))
+        WithTransaction(() =>
         {
-            if (request.CancellationTokenSource?.IsCancellationRequested == true)
-            {
-                batch.Options |= IndexDirectoryBatchOptions.IndexingWasCancelled;
-                break;
-            }
+            SaveDirectoryBatch(batch);
+            UpdateDirectories();
 
-            var attributes = IOUtilities.PathGetAttributes(entry);
-            if (attributes == null)
-                continue;
+            var inclusions = (Inclusions ?? []).ToHashSet();
+            var excludedDirs = (ExcludedDirectoryNames?.Select(e => e.ToLowerInvariant()) ?? []).ToHashSet();
+            var excludedExts = new HashSet<string>();
 
-            if (attributes.Value.HasFlag(FileAttributes.Directory))
-            {
-                batch.NumberOfSkippedDirectories++;
-                continue;
-            }
+            // we do it ourselves
+            request.EnumerationOptions.RecurseSubdirectories = false;
 
-            var dirPath = Path.GetDirectoryName(entry);
-            if (dirPath != null && !dirPath.EqualsIgnoreCase(dir.Path)) // don't exclude the directory being indexed
-            {
-                var dirName = Path.GetFileName(dirPath);
-                if (excludedDirs.Contains(dirName.ToLowerInvariant()))
-                {
-                    batch.NumberOfSkippedFiles++;
-                    continue;
-                }
-            }
+            var writer = GetWriter();
+            indexDirectory(request.InputDirectory.Path);
 
             batch.EndTimeUtc = DateTime.UtcNow;
-            var e = new IndexingEventArgs(batch, entry);
-            OnFileIndexing(this, e);
-            if (e.Cancel)
-                continue;
+            batch.NonIndexedFileExtensions.AddRange(excludedExts);
+            batch.Inclusions.AddRange(inclusions);
+            batch.ExcludedDirectoryNames.AddRange(excludedDirs);
+            SaveDirectoryBatch(batch);
+            UpdateDirectories();
+            writer.Commit();
 
-            var ext = Path.GetExtension(entry).ToLowerInvariant();
-            if (ext == FileExtension) // never index doxie files
+            bool indexDirectory(string directoryPath)
             {
-                batch.NumberOfSkippedFiles++;
-                continue;
+                foreach (var file in System.IO.Directory.EnumerateFiles(directoryPath, request.FileSearchPattern, request.EnumerationOptions))
+                {
+                    if (request.CancellationTokenSource?.IsCancellationRequested == true)
+                    {
+                        batch.Options |= IndexDirectoryBatchOptions.IndexingWasCancelled;
+                        return false;
+                    }
+
+                    var ext = Path.GetExtension(file).ToLowerInvariant();
+                    if (ext == FileExtension) // never index doxie files
+                    {
+                        batch.NumberOfSkippedFiles++;
+                        continue;
+                    }
+
+                    batch.EndTimeUtc = DateTime.UtcNow;
+                    var e = new IndexingEventArgs(batch, file);
+                    OnFileIndexing(this, e);
+                    if (e.CancelIndexing)
+                        return false;
+
+                    if (e.Cancel)
+                    {
+                        batch.NumberOfSkippedFiles++;
+                        continue;
+                    }
+
+                    if (!indexFile(file, ext))
+                    {
+                        batch.NumberOfSkippedFiles++;
+                    }
+                    else
+                    {
+                        batch.NumberOfDocuments++;
+                    }
+                }
+
+                foreach (var dirPath in System.IO.Directory.EnumerateDirectories(directoryPath, request.DirectorySearchPattern, request.EnumerationOptions))
+                {
+                    if (request.CancellationTokenSource?.IsCancellationRequested == true)
+                    {
+                        batch.Options |= IndexDirectoryBatchOptions.IndexingWasCancelled;
+                        return false;
+                    }
+
+                    var dirName = Path.GetFileName(dirPath).ToLowerInvariant();
+
+                    // note excluded dir is a file name pattern for which to search
+                    // https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathmatchspecexw
+                    if (excludedDirs.Any(d => IOUtilities.PathMatchSpec(dirName, d)))
+                    {
+                        batch.NumberOfSkippedDirectories++;
+                        continue;
+                    }
+
+                    // recurse into subdirectories
+                    if (!indexDirectory(dirPath))
+                        return false; // cancelled
+                }
+                return true;
             }
 
-            // run all exclusions first
-            if (inclusions.Where(i => i.IsExclusion).Any(d => d.Matches(entry)))
+            bool indexFile(string entry, string ext)
             {
-                batch.NumberOfSkippedFiles++;
-                continue;
+                // run all exclusions first
+                if (inclusions.Where(i => i.IsExclusion).Any(d => d.Matches(entry)))
+                    return false;
+
+                if (!inclusions.Where(i => !i.IsExclusion).Any(d => d.Matches(entry)))
+                {
+                    excludedExts.Add(ext);
+                    return false;
+                }
+
+                var relPath = Path.GetRelativePath(request.InputDirectory.Path, entry);
+                string[] lines;
+                try
+                {
+                    var encoding = EncodingDetector.DetectEncoding(entry, Settings.Current.EncodingDetectorMode);
+                    lines = File.ReadAllLines(entry, encoding);
+                }
+                catch
+                {
+                    return false;
+                }
+
+                var pathForIndex = relPath;
+
+                var idx = new IndexDocument(DefaultFieldName);
+                idx.AddField(DefaultFieldName, pathForIndex + " " + string.Join(Environment.NewLine, lines));
+
+                var fext = ext;
+                if (fext.StartsWith('.'))
+                {
+                    fext = fext[1..]; // remove leading dot
+                }
+                idx.AddField(FieldExt, fext, true);
+                idx.AddField(FieldLinesCount, lines.Length, true);
+                idx.AddField(FieldBatchId, batch.Id.ToString("N"), true);
+                idx.AddField(FieldDirectoryId, dir.Id, true);
+                idx.AddField(FieldRelPath, relPath, true);
+
+                var doc = idx.FinishAndGetDocument();
+                writer.AddDocument(doc);
+                return true;
             }
-
-            if (!inclusions.Where(i => !i.IsExclusion).Any(d => d.Matches(entry)))
-            {
-                excludedExts.Add(ext);
-                batch.NumberOfSkippedFiles++;
-                continue;
-            }
-
-            var relPath = Path.GetRelativePath(request.InputDirectory.Path, entry);
-
-            var encoding = EncodingDetector.DetectEncoding(entry, Settings.Current.EncodingDetectorMode);
-            var lines = File.ReadAllLines(entry, encoding);
-
-            var pathForIndex = relPath;
-
-            var idx = new IndexDocument(DefaultFieldName);
-            idx.AddField(DefaultFieldName, pathForIndex + " " + string.Join(Environment.NewLine, lines));
-
-            var fext = ext;
-            if (fext.StartsWith('.'))
-            {
-                fext = fext[1..]; // remove leading dot
-            }
-            idx.AddField(FieldExt, fext, true);
-            idx.AddField(FieldLinesCount, lines.Length, true);
-            idx.AddField(FieldBatchId, batch.Id.ToString("N"), true);
-            idx.AddField(FieldDirectoryId, dir.Id, true);
-            idx.AddField(FieldRelPath, relPath, true);
-
-            var doc = idx.FinishAndGetDocument();
-            writer.AddDocument(doc);
-            batch.NumberOfDocuments++;
-        }
-
-        batch.EndTimeUtc = DateTime.UtcNow;
-        batch.NonIndexedFileExtensions.AddRange(excludedExts);
-        batch.Inclusions.AddRange(inclusions);
-        batch.ExcludedDirectoryNames.AddRange(excludedDirs);
-        SaveDirectoryBatch(batch);
-        UpdateDirectories();
-
-        Commit();
-        if (VacuumOnCommit)
-        {
-            try
-            {
-                _sqlDirectory.Database.Vacuum();
-            }
-            catch
-            {
-                // continue regardless of vacuum failure
-            }
-        }
+        });
     }
 
     protected virtual bool SaveDirectoryBatch(IndexDirectoryBatch batch)
@@ -376,48 +411,98 @@ public class Index : INotifyPropertyChanged, IDisposable
         if (batch.Directory == null)
             throw new InvalidOperationException();
 
-        // delete other batches' lucene documents
-        var batches = _sqlDirectory.Database.Load<DirectoryBatch>($"SELECT * FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", batch.Directory.Id);
-        foreach (var deleteDataBatch in batches.Where(b => b.Id != batch.Id))
-        {
-            DeleteDocuments(deleteDataBatch);
-        }
-
         var db = DirectoryBatch.From(new Directory(_sqlDirectory.Database) { Path = batch.Directory.Path, Id = batch.Directory.Id, }, batch);
         return _sqlDirectory.Save(db);
     }
 
-    private void DeleteDocuments(DirectoryBatch batchData)
+    public virtual void DeleteDocuments(IndexDirectory directory)
     {
-        // delete all lucene documents in the batch
-        GetWriter().DeleteDocuments(new Term(FieldBatchId, batchData.Id.ToString("N")));
+        ArgumentNullException.ThrowIfNull(directory);
+        if (directory.Path == null || directory.Id <= 0)
+            throw new InvalidOperationException();
 
-        // remember it was deleted
-        batchData.Options |= IndexDirectoryBatchOptions.DataWasDeleted;
-        _sqlDirectory.Save(batchData);
+        WithTransaction(() => DeleteDocuments(new Directory(_sqlDirectory.Database) { Path = directory.Path, Id = directory.Id, }));
+        Vacuum();
+        Extensions.WrapDispatcher(() => OnPropertyChanged(nameof(Directories)));
     }
 
-    public virtual bool DeleteDirectory(IndexDirectory dir) => Extensions.WrapDispatcher(() =>
+    private void DeleteDocuments(Directory directory)
+    {
+        var qry = NumericRangeQuery.NewInt32Range(FieldDirectoryId, directory.Id, directory.Id, true, true);
+        var writer = GetWriter();
+        writer.DeleteDocuments(qry);
+        writer.Commit();
+    }
+
+    public virtual bool DeleteDirectory(IndexDirectory dir)
     {
         ArgumentNullException.ThrowIfNull(dir);
-        _sqlDirectory.Database.BeginTransaction();
-        try
+        var ret = WithTransaction(() =>
         {
-            var ret = _sqlDirectory.Database.Delete(new Directory(_sqlDirectory.Database) { Id = dir.Id });
+            var dd = new Directory(_sqlDirectory.Database) { Id = dir.Id };
+            DeleteDocuments(dd);
+            var ret = _sqlDirectory.Database.Delete(dd);
             if (_sqlDirectory.Database.ExecuteNonQuery($"DELETE FROM {nameof(DirectoryBatch)} WHERE {nameof(DirectoryBatch.Directory)} = ?", dir.Id) > 0)
             {
                 ret = true;
             }
-            _sqlDirectory.Database.Commit();
-            OnPropertyChanged(nameof(Directories));
             return ret;
+        });
+
+        Vacuum();
+        Extensions.WrapDispatcher(() => OnPropertyChanged(nameof(Directories)));
+        return ret;
+    }
+
+    public void WithTransaction(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        _sqlDirectory.Database.BeginTransaction();
+        try
+        {
+            action();
+            _sqlDirectory.Database.Commit();
         }
         catch
         {
             _sqlDirectory.Database.Rollback();
             throw;
         }
-    });
+    }
+
+    public T WithTransaction<T>(Func<T> func)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        _sqlDirectory.Database.BeginTransaction();
+        try
+        {
+            var result = func();
+            _sqlDirectory.Database.Commit();
+            return result;
+        }
+        catch
+        {
+            _sqlDirectory.Database.Rollback();
+            throw;
+        }
+    }
+
+    public virtual void BuildTemplate(string targetFilePath)
+    {
+        ArgumentNullException.ThrowIfNull(targetFilePath);
+
+        IOUtilities.FileOverwrite(FilePath, targetFilePath);
+
+        using var writer = OpenWrite(targetFilePath);
+        writer.WithTransaction(() =>
+        {
+            writer._sqlDirectory.PrepareForTemplate();
+            writer._sqlDirectory.Database.DeleteAll(nameof(Directory));
+            writer._sqlDirectory.Database.DeleteAll(nameof(DirectoryBatch));
+        });
+        writer.Vacuum();
+    }
 
     public static Index OpenRead(string filePath)
     {
@@ -430,6 +515,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
+            EventProvider.Default.WriteMessage("Error: " + ex);
             throw new Exception($"File '{filePath}' doesn't appear to be a valid Doxie V{AssemblyUtilities.GetInformationalVersion()} index file.", ex);
         }
     }
@@ -445,6 +531,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
+            EventProvider.Default.WriteMessage("Error: " + ex);
             throw new Exception($"File '{filePath}' doesn't appear to be a valid Doxie V{AssemblyUtilities.GetInformationalVersion()} index file.", ex);
         }
     }
@@ -457,13 +544,13 @@ public class Index : INotifyPropertyChanged, IDisposable
         return _writer;
     }
 
-    public virtual void Commit() => GetWriter().Commit();
+    protected virtual void WriterCommit() => GetWriter().Commit();
     public virtual void DeleteAllItems(bool commit = true)
     {
         GetWriter().DeleteAll();
         if (commit)
         {
-            Commit();
+            WriterCommit();
         }
     }
 
@@ -477,7 +564,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         GetWriter().DeleteDocuments(qry);
         if (commit)
         {
-            Commit();
+            WriterCommit();
         }
     }
 
@@ -505,6 +592,14 @@ public class Index : INotifyPropertyChanged, IDisposable
         return fragments;
     }
 
+    public IReadOnlyList<IndexSearchResultItem> GetIndexedDocuments(IndexDirectory directory, int maximumDocuments = int.MaxValue)
+    {
+        ArgumentNullException.ThrowIfNull(directory);
+        var qry = NumericRangeQuery.NewInt32Range(FieldDirectoryId, directory.Id, directory.Id, true, true);
+        var result = Search(qry, IndexSearchResultItem.CreateItem, maximumDocuments);
+        return result.Items;
+    }
+
     private static SearchResultItem CreateItemFunc(Index index, int docIndex, ScoreDoc scoreDoc, Document doc) => new() { Index = docIndex, Score = scoreDoc.Score, DocumentId = scoreDoc.Doc, Document = doc };
 
     public SearchResult<SearchResultItem> Search(string query, int maximumDocuments = int.MaxValue)
@@ -512,13 +607,21 @@ public class Index : INotifyPropertyChanged, IDisposable
 
     public virtual SearchResult<T> Search<T>(string query, Func<Index, int, ScoreDoc, Document, T?> createItem, int maximumDocuments = int.MaxValue) where T : SearchResultItem
     {
+        var parser = new QueryParser(LuceneVersion.LUCENE_48, DefaultFieldName, _analyzer) { AllowLeadingWildcard = true, };
+        var qry = parser.Parse(query);
+        return Search(qry, createItem, maximumDocuments);
+    }
+
+    public SearchResult<SearchResultItem> Search(Query query, int maximumDocuments = int.MaxValue)
+        => Search(query, CreateItemFunc, maximumDocuments);
+
+    public virtual SearchResult<T> Search<T>(Query query, Func<Index, int, ScoreDoc, Document, T?> createItem, int maximumDocuments = int.MaxValue) where T : SearchResultItem
+    {
         ArgumentNullException.ThrowIfNull(query);
         if (_searcher == null)
             throw new InvalidOperationException("Cannot search in a write-only index.");
 
-        var parser = new QueryParser(LuceneVersion.LUCENE_48, DefaultFieldName, _analyzer) { AllowLeadingWildcard = true, };
-        var qry = parser.Parse(query);
-        var topDocs = _searcher.Search(qry, maximumDocuments);
+        var topDocs = _searcher.Search(query, maximumDocuments);
         var result = new SearchResult<T>
         {
             TotalHits = topDocs.TotalHits
@@ -628,6 +731,7 @@ public class Index : INotifyPropertyChanged, IDisposable
         public DateTime EndTimeUtc { get; set; }
         public int NumberOfDocuments { get; set; }
         public int NumberOfSkippedFiles { get; set; }
+        public int NumberOfSkippedDirectories { get; set; }
         public string? Inclusions { get; set; }
         public string? ExcludedDirectoryNames { get; set; }
         public string? NonIndexedFileExtensions { get; set; }
@@ -646,6 +750,7 @@ public class Index : INotifyPropertyChanged, IDisposable
                 EndTimeUtc = EndTimeUtc,
                 NumberOfDocuments = NumberOfDocuments,
                 NumberOfSkippedFiles = NumberOfSkippedFiles,
+                NumberOfSkippedDirectories = NumberOfSkippedDirectories,
             };
 
             batch.Inclusions.AddRange(Conversions.SplitToNullifiedList(Inclusions, [_dbSeparator]).Select(i => InclusionDefinition.Parse(i)).WhereNotNull());
@@ -663,6 +768,7 @@ public class Index : INotifyPropertyChanged, IDisposable
             EndTimeUtc = batch.EndTimeUtc,
             NumberOfDocuments = batch.NumberOfDocuments,
             NumberOfSkippedFiles = batch.NumberOfSkippedFiles,
+            NumberOfSkippedDirectories = batch.NumberOfSkippedDirectories,
             Inclusions = string.Join(_dbSeparator, batch.Inclusions),
             ExcludedDirectoryNames = string.Join(_dbSeparator, batch.ExcludedDirectoryNames),
             NonIndexedFileExtensions = string.Join(_dbSeparator, batch.NonIndexedFileExtensions),

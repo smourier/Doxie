@@ -6,7 +6,8 @@ public class IndexScanRequest(IndexDirectory inputDirectory)
     public CancellationTokenSource? CancellationTokenSource { get; set; }
     public IndexScanRequestOptions Options { get; set; }
     public virtual bool AsyncProcessing { get; set; } = true;
-    public virtual string SearchPattern { get; set; } = "*.*";
+    public virtual string DirectorySearchPattern { get; set; } = "*";
+    public virtual string FileSearchPattern { get; set; } = "*";
     public virtual EnumerationOptions EnumerationOptions { get; set; } = new EnumerationOptions
     {
         IgnoreInaccessible = true,

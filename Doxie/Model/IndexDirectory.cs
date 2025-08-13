@@ -19,6 +19,7 @@ public class IndexDirectory : INotifyPropertyChanged, IEquatable<IndexDirectory>
 
     public override string ToString() => Path;
 
+    public IReadOnlyList<IndexSearchResultItem> GetIndexedDocuments(int maximumDocuments) => Index.GetIndexedDocuments(this, maximumDocuments);
     internal void Update(IndexDirectory? other)
     {
         if (other == null || other == this)

@@ -35,7 +35,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         webView.CoreWebView2InitializationCompleted += CoreWebView2InitializationCompleted;
         var env = CoreWebView2Environment.CreateAsync(userDataFolder: Settings.WebView2UserDataPath);
-        _webView2Initialized = webView.EnsureCoreWebView2Async(env.Result);
+        _webView2Initialized = webView.EnsureCoreWebView2Async(env.Result); // calling Result might not be ideal I guess, but simpler here
         DataContext = this;
     }
 
@@ -500,7 +500,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         if (item == null || item.Path == null || !IOUtilities.PathIsFile(item.Path))
             return;
 
-        Extensions.OpenFoldersAndSelectFiles([item.Path]);
+        Extensions.OpenFoldersAndSelectPaths([item.Path]);
     }
 
     private async Task GoToHighlightedRange()

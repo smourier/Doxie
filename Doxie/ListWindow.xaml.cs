@@ -19,9 +19,11 @@ public partial class ListWindow : Window
 
     public string? SortByDescriptionButtonText { get; set; }
     public string? SortByNameButtonText { get; set; }
+    public string? CopyButtonText { get; set; }
     public bool IsSortByDescriptionButtonVisible => !string.IsNullOrEmpty(SortByDescriptionButtonText);
     public bool IsSortByNameButtonVisible => !string.IsNullOrEmpty(SortByNameButtonText);
-    public bool IsSortPanelEnabled => IsSortByDescriptionButtonVisible || IsSortByNameButtonVisible;
+    public bool IsCopyButtonVisible => !string.IsNullOrEmpty(CopyButtonText);
+    public bool IsSortPanelEnabled => IsSortByDescriptionButtonVisible || IsSortByNameButtonVisible || IsCopyButtonVisible;
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
@@ -59,5 +61,12 @@ public partial class ListWindow : Window
         _items.Clear();
         _items.AddRange(sortedItems);
         _sortedByDescriptionAsc = !_sortedByDescriptionAsc;
+    }
+
+    private void Copy_Click(object sender, RoutedEventArgs e)
+    {
+        var sb = string.Join(Environment.NewLine, _items.Select(i => i.Name));
+        Clipboard.SetText(sb);
+        MessageBox.Show($"{_items.Count} line(s) copied to clipboard", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

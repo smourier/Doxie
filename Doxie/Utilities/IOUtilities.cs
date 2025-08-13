@@ -139,6 +139,7 @@ public static class IOUtilities
         return data.fileAttributes;
     }
 
+    public static bool PathMatchSpec(string fileName, string spec) => PathMatchSpecExW(fileName, spec, 0) == 0;
     public static bool PathExists(string? path) => PathGetAttributes(path).HasValue;
     public static bool PathIsFile(string? path)
     {
@@ -214,4 +215,7 @@ public static class IOUtilities
 
     [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
     private extern static bool GetFileAttributesEx(string name, int fileInfoLevel, ref WIN32_FILE_ATTRIBUTE_DATA lpFileInformation);
+
+    [DllImport("shlwapi", CharSet = CharSet.Unicode)]
+    private extern static int PathMatchSpecExW(string pszFile, string pszSpec, int dwFlags);
 }

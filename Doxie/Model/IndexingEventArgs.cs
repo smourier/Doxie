@@ -4,6 +4,7 @@ public class IndexingEventArgs(IndexDirectoryBatch batch, string filePath) : Can
 {
     public IndexDirectoryBatch Batch { get; } = batch ?? throw new ArgumentNullException(nameof(batch));
     public string FilePath { get; } = filePath ?? throw new ArgumentNullException(nameof(filePath));
+    public virtual bool CancelIndexing { get; set; }
 
     public override string ToString() => FilePath;
 }

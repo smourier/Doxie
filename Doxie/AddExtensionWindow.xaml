@@ -31,9 +31,13 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Margin="10" Text="Definition" VerticalAlignment="Center" />
+        <TextBlock
+            Margin="10"
+            VerticalAlignment="Center"
+            Text="Definition" />
 
-        <TextBox x:Name="definition"
+        <TextBox
+            x:Name="definition"
             Grid.Column="1"
             Grid.ColumnSpan="3"
             Margin="10,10,15,10"
@@ -70,7 +74,7 @@
             Grid.Row="3"
             Grid.Column="2"
             Width="70"
-            Margin="5"
+            Margin="5,5,5,10"
             Click="Ok_Click"
             IsDefault="True">
             OK
@@ -80,7 +84,7 @@
             Grid.Row="3"
             Grid.Column="3"
             Width="70"
-            Margin="5,5,15,5"
+            Margin="5,5,15,10"
             Click="Cancel_Click">
             Cancel
         </Button>

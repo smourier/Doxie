@@ -39,7 +39,8 @@ public partial class IndexingWindow : Window
             {
                 CancellationTokenSource = _cts
             };
-            await _directory.Index.Scan(request).ConfigureAwait(false);
+
+            var result = await _directory.Index.Scan(request).ConfigureAwait(false);
             _completed = true;
             _ = Dispatcher.BeginInvoke(() =>
             {
@@ -50,13 +51,22 @@ public partial class IndexingWindow : Window
                     return;
                 }
 
+                directory.Text = string.Empty;
                 if (_cancelled)
                 {
                     statusText.Text = "Indexing was cancelled.";
                 }
                 else
                 {
-                    statusText.Text = "Indexing completed.";
+                    if (result.Exception != null)
+                    {
+                        var error = result.Exception.GetInterestingException() ?? result.Exception;
+                        statusText.Text = $"Indexing failed ({error.GetType().FullName}): " + error.GetInterestingExceptionMessage();
+                    }
+                    else
+                    {
+                        statusText.Text = "Indexing completed successfully.";
+                    }
                 }
                 cancel.Content = "Close";
             });

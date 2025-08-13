@@ -7,7 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:model="clr-namespace:Doxie.Model"
     Title="Doxie"
-    Width="1000"
+    Width="1200"
     Height="800"
     AllowDrop="True"
     FontFamily="Consolas"
@@ -83,6 +83,12 @@
                                     </DataTemplate>
                                 </MenuItem.Resources>
                             </MenuItem>
+                            <Separator Visibility="{Binding IsIndexLoaded, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem
+                                x:Name="exportTemplate"
+                                Click="ExportTemplate_Click"
+                                Header="Export index as template..."
+                                Visibility="{Binding IsIndexLoaded, Converter={StaticResource BoolToVis}}" />
                             <Separator />
                             <MenuItem Click="OnExitClick" Header="E_xit" />
                         </MenuItem>
@@ -272,18 +278,18 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock VerticalAlignment="Center" Text="{Binding Path}" />
                             <Button
-                                x:Name="deleteDir"
-                                Grid.Column="1"
-                                Margin="5"
-                                Click="DeleteDir_Click">
-                                Delete directory
-                            </Button>
-                            <Button
                                 x:Name="scanDir"
-                                Grid.Column="2"
+                                Grid.Column="1"
                                 Margin="5"
                                 Click="ScanDir_Click">
                                 Scan
+                            </Button>
+                            <Button
+                                x:Name="deleteDir"
+                                Grid.Column="2"
+                                Margin="5"
+                                Click="DeleteDir_Click">
+                                Remove from index
                             </Button>
                             <Button
                                 x:Name="open"
@@ -300,7 +306,7 @@
 
         <GridSplitter
             Grid.Row="3"
-            Height="1"
+            Height="2"
             HorizontalAlignment="Stretch"
             Background="#52432d" />
 
@@ -363,6 +369,7 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center" />
+                                <Setter Property="Margin" Value="5,0,5,0" />
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -370,20 +377,35 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center" />
+                                <Setter Property="Margin" Value="5,0,5,0" />
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Binding="{Binding NumberOfDocuments}" Header="Number of documents">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="VerticalAlignment" Value="Center" />
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Number of documents">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate DataType="model:IndexDirectoryBatch">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button
+                                        x:Name="viewDocuments"
+                                        Margin="5"
+                                        Click="ViewDocuments_Click"
+                                        IsEnabled="{Binding NumberOfDocuments, Converter={StaticResource CountToBooleanConverter}}"
+                                        ToolTip="Shift and click to copy to clipboard">
+                                        View
+                                    </Button>
+                                    <TextBlock
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding NumberOfDocuments}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Binding="{Binding NumberOfSkippedFiles}" Header="Number of skipped files">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center" />
+                                <Setter Property="Margin" Value="5,0,5,0" />
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -391,6 +413,7 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center" />
+                                <Setter Property="Margin" Value="5,0,5,0" />
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -398,6 +421,7 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center" />
+                                <Setter Property="Margin" Value="5,0,5,0" />
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -405,30 +429,12 @@
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center" />
+                                <Setter Property="Margin" Value="5,0,5,0" />
                                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                                 <Setter Property="ToolTip" Value="{Binding Options, Converter={StaticResource EnumDisplayConverter}}" />
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTemplateColumn Header="Included file extensions">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button
-                                        x:Name="viewIncludedExts"
-                                        Margin="5"
-                                        Click="ViewInclusions_Click"
-                                        IsEnabled="{Binding IncludedFileExtensions, Converter={StaticResource CountToBooleanConverter}}">
-                                        View
-                                    </Button>
-                                    <TextBlock
-                                        Margin="5,0,0,0"
-                                        VerticalAlignment="Center"
-                                        Text="{Binding IncludedFileExtensions, Converter={StaticResource CountConverter}}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Non-Indexed file extensions">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -450,7 +456,7 @@
                     </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Excluded directory names">
                         <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
+                            <DataTemplate DataType="model:IndexDirectoryBatch">
                                 <StackPanel Orientation="Horizontal">
                                     <Button
                                         x:Name="viewExcludedDirs"

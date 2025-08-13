@@ -31,6 +31,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public Model.Index? Index { get; private set; }
     public Task? IndexingTask { get; private set; }
+    public bool IsIndexLoaded => Index != null;
     public IndexDirectory? CurrentDirectory => directories.SelectedItem as IndexDirectory;
     public IReadOnlyList<RecentFile> RecentFiles
     {
@@ -66,6 +67,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Index?.Dispose();
         Index = index;
         OnPropertyChanged(nameof(Index));
+        OnPropertyChanged(nameof(IsIndexLoaded));
         UpdateGridVisibility();
     }
 
@@ -89,6 +91,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        if (e.Key == Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.F4)
         {
             var lastRecent = Settings.Current.RecentFiles.FirstOrDefault()?.FilePath;
@@ -163,7 +172,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Title = "Choose an index file path",
             Filter = $"Doxie Index Files (*{Model.Index.FileExtension})|*{Model.Index.FileExtension}",
             DefaultExt = Model.Index.FileExtension,
-            CheckFileExists = false,
+            CheckFileExists = true,
             CheckPathExists = true,
             RestoreDirectory = true,
         };
@@ -183,16 +192,98 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-    private void ViewInclusions_Click(object sender, RoutedEventArgs e)
+    private void ExportTemplate_Click(object sender, RoutedEventArgs e)
+    {
+        if (Index == null)
+            return;
+
+        var dlg = new SaveFileDialog
+        {
+            Title = "Choose an target file path",
+            Filter = $"Doxie Index Files (*{Model.Index.FileExtension})|*{Model.Index.FileExtension}",
+            DefaultExt = Model.Index.FileExtension,
+            CheckFileExists = false,
+            CheckPathExists = true,
+            RestoreDirectory = true,
+        };
+        if (dlg.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            Index.BuildTemplate(dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Failed to create a template from '{Index.FilePath}': {ex.GetInterestingExceptionMessage()}", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        MessageBox.Show($"File was sucessfully exported to '{dlg.FileName}'.", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ViewDocuments_Click(object sender, RoutedEventArgs e)
     {
         var batch = sender.GetDataContext<IndexDirectoryBatch>();
         if (batch == null)
             return;
 
-        var list = new ListWindow(batch.Inclusions.Where(i => i.Options.HasFlag(InclusionDefinitionOptions.IsExtension)).Select(i => new ListItem(i.Text)))
+        if (Index == null || CurrentDirectory == null)
+            return;
+
+        var max = Settings.Current.MaximumDocumentsInView;
+        IReadOnlyList<IndexSearchResultItem> result;
+        try
+        {
+            using var index = Model.Index.OpenRead(Index.FilePath);
+            result = index.GetIndexedDocuments(CurrentDirectory, max);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Failed to search index: {ex.GetInterestingExceptionMessage()}.", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            var sb = string.Join(Environment.NewLine, result.Order());
+            Clipboard.SetText(sb);
+            MessageBox.Show($"{result.Count} line(s) copied to clipboard.", AssemblyUtilities.GetProduct(), MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var title = $"Indexed Documents - ";
+        if (result.Count == max)
+        {
+            title += " maxed to ";
+        }
+        title += $"{result.Count} document(s)";
+
+        var list = new ListWindow(result.OrderBy(r => r.RelativePath).Select(d => new ListItem(d.RelativePath!)
+        {
+            ShowButton = true,
+            Description = d.Extension,
+            ButtonText = "Open...",
+            Action = () =>
+            {
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                {
+                    Extensions.OpenAsText(d.Path);
+                }
+                else
+                {
+                    Extensions.OpenInExplorer(d.Path);
+                }
+                return false;
+            }
+        }))
         {
             Owner = this,
-            Title = "View Included File Extensions",
+            Title = title,
+            Width = Width - 100,
+            CopyButtonText = "Copy to clipboard",
+            SortByDescriptionButtonText = "Sort by extension",
+            SortByNameButtonText = "Sort by path",
         };
         list.ShowDialog();
     }
@@ -233,7 +324,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }))
         {
             Owner = this,
-            Title = "View Non-Indexed File Extensions",
+            Title = "Non-Indexed File Extensions",
             SortByDescriptionButtonText = "Sort by perceived type",
             SortByNameButtonText = "Sort by extension",
         }
@@ -260,7 +351,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var list = new ListWindow(batch.ExcludedDirectoryNames.Select(name => new ListItem(name)))
         {
             Owner = this,
-            Title = "View Excluded Directories",
+            Title = "Excluded Directories",
         };
         list.ShowDialog();
     }
@@ -451,6 +542,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void QueryIndex_Click(object sender, RoutedEventArgs e)
     {
+        if (Index != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                Extensions.OpenInExplorer(Index.FilePath);
+            }
+            else
+            {
+                Extensions.OpenFolderAndSelectPath(Index.FilePath);
+            }
+            return;
+        }
+
         try
         {
             var version = CoreWebView2Environment.GetAvailableBrowserVersionString();

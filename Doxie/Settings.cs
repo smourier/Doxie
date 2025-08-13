@@ -93,6 +93,9 @@ public class Settings : Serializable<Settings>
     [DefaultValue(EncodingDetectorMode.AutoDetect)]
     public virtual EncodingDetectorMode EncodingDetectorMode { get => GetPropertyValue(EncodingDetectorMode.AutoDetect); set { SetPropertyValue(value); } }
 
+    [DefaultValue(10000)]
+    public virtual int MaximumDocumentsInView { get => GetPropertyValue(10000); set { SetPropertyValue(value); } }
+
     private Dictionary<string, DateTime> GetRecentFiles(bool checkExists = true)
     {
         var dic = new Dictionary<string, DateTime>(StringComparer.Ordinal);

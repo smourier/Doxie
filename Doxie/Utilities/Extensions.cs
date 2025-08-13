@@ -396,12 +396,59 @@ public static class Extensions
         return dispatcher.Invoke(func);
     }
 
-    public static void OpenFoldersAndSelectFiles(IEnumerable<string> files)
+    public static void OpenAsText(string? filePath)
     {
-        ArgumentNullException.ThrowIfNull(files);
+        if (filePath == null || !IOUtilities.PathIsFile(filePath))
+            return;
+
+        try
+        {
+            using var reg = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Notepad++", false);
+            if (reg != null)
+            {
+                var psi = new ProcessStartInfo("notepad++.exe", filePath)
+                {
+                    UseShellExecute = true,
+                    CreateNoWindow = true,
+                };
+                Process.Start(psi);
+                return;
+            }
+        }
+        catch
+        {
+            // continue
+        }
+
+        try
+        {
+            var psi = new ProcessStartInfo("notepad.exe", filePath)
+            {
+                UseShellExecute = true,
+                CreateNoWindow = true,
+            };
+            Process.Start(psi);
+        }
+        catch
+        {
+            // continue
+        }
+    }
+
+    public static void OpenFolderAndSelectPath(string? path)
+    {
+        if (path == null)
+            return;
+
+        OpenFoldersAndSelectPaths([path]);
+    }
+
+    public static void OpenFoldersAndSelectPaths(IEnumerable<string> paths)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
 
         // get all items & group by folder (path)
-        var items = Item.FromPaths(files);
+        var items = Item.FromPaths(paths);
         try
         {
             foreach (var group in items.GroupBy(g => g.ToString()))

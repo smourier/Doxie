@@ -26,13 +26,13 @@ public class InclusionDefinition : IEquatable<InclusionDefinition>
         {
             var exclusionText = IsExclusion ? "Excludes" : "Includes";
             if (Options.HasFlag(InclusionDefinitionOptions.IsExtension))
-                return $"{exclusionText} file names with extension '.{Text}'";
+                return $"{exclusionText} names with extension '.{Text}'";
 
             if (Options.HasFlag(InclusionDefinitionOptions.IsEndOfFile))
-                return $"{exclusionText} file names ending with '{Text}'";
+                return $"{exclusionText} names ending with '{Text}'";
 
             if (Options.HasFlag(InclusionDefinitionOptions.ForceRegex))
-                return $"{exclusionText} file names using regex '{Text}'";
+                return $"{exclusionText} names using regex '{Text}'";
 
             return string.Empty;
         }
@@ -109,7 +109,7 @@ public class InclusionDefinition : IEquatable<InclusionDefinition>
             return null;
 
         var def = parse();
-        if (def != null && def.IsExclusion)
+        if (def != null && options.HasFlag(InclusionDefinitionOptions.ForceExclusion))
         {
             def.Options |= InclusionDefinitionOptions.ForceExclusion;
         }

@@ -3,6 +3,7 @@
 public partial class AddExtensionWindow : Window, INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
+
     private string? _description;
     private string? _inclusion;
     private bool _isRegex;
@@ -80,6 +81,7 @@ public partial class AddExtensionWindow : Window, INotifyPropertyChanged
             {
                 options |= InclusionDefinitionOptions.ForceRegex;
             }
+
             if (IsExclusion)
             {
                 options |= InclusionDefinitionOptions.ForceExclusion;

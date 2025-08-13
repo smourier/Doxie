@@ -1,7 +1,11 @@
 ﻿namespace Doxie;
 
-public partial class AddDirectoryWindow : Window
+public partial class AddDirectoryWindow : Window, INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private string? _directoryName;
+
     public AddDirectoryWindow()
     {
         InitializeComponent();
@@ -9,7 +13,19 @@ public partial class AddDirectoryWindow : Window
         UpdateControls();
     }
 
-    public string? DirectoryName { get; set; }
+    public string? DirectoryName
+    {
+        get => _directoryName;
+        set
+        {
+            if (_directoryName == value)
+                return;
+
+            _directoryName = value;
+            OnPropertyChanged();
+            UpdateControls();
+        }
+    }
 
     private void UpdateControls() => ok.IsEnabled = !string.IsNullOrWhiteSpace(DirectoryName);
 
@@ -35,5 +51,5 @@ public partial class AddDirectoryWindow : Window
         Close();
     }
 
-    private void DirectoryName_TextChanged(object sender, TextChangedEventArgs e) => UpdateControls();
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

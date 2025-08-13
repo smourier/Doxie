@@ -56,6 +56,11 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         return Conversions.TryChangeType(setting.Value, CultureInfo.InvariantCulture, out value);
     }
 
+    internal void PrepareForTemplate()
+    {
+        Database.DeleteAll(nameof(LuceneFile));
+    }
+
     public virtual string? LoadNullifiedSetting(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
