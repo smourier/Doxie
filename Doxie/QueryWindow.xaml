@@ -104,6 +104,7 @@
                             <Grid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Click="OpenInExplorer_Click" Header="Open..." />
+                                    <MenuItem Click="OpenAsTextInExplorer_Click" Header="Open as text..." />
                                     <MenuItem Click="OpenContaingFolder_Click" Header="Open containing folder in Explorer..." />
                                 </ContextMenu>
                             </Grid.ContextMenu>

@@ -494,6 +494,15 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         Extensions.OpenInExplorer(item.Path);
     }
 
+    private void OpenAsTextInExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        var item = sender.GetDataContext<IndexSearchResultItem>();
+        if (item == null || !IOUtilities.PathIsFile(item.Path))
+            return;
+
+        Extensions.OpenAsText(item.Path);
+    }
+
     private void OpenContaingFolder_Click(object sender, RoutedEventArgs e)
     {
         var item = sender.GetDataContext<IndexSearchResultItem>();

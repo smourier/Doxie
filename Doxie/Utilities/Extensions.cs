@@ -549,6 +549,7 @@ public static class Extensions
             }
             catch
             {
+                // continue
             }
         }
     }
@@ -567,6 +568,7 @@ public static class Extensions
             }
             catch
             {
+                // continue
             }
         }
     }
