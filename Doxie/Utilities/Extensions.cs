@@ -115,6 +115,7 @@ public static class Extensions
     public static bool IsValid(this DateTime dt) => dt != DateTime.MinValue && dt != DateTime.MaxValue && dt.Kind != DateTimeKind.Unspecified;
     public static bool IsValid(this DateTime? dt) => dt.HasValue && IsValid(dt.Value);
 
+    public static string ComputeHash(this string? text) => ComputeGuidHash(text).ToString("N");
     public static Guid ComputeGuidHash(this string? text)
     {
         if (text == null)

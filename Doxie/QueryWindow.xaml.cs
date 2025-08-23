@@ -28,7 +28,6 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     public QueryWindow(string indexFilePath)
     {
         ArgumentNullException.ThrowIfNull(indexFilePath);
-        Index = Model.Index.OpenRead(indexFilePath);
         _eco.Load += EditorControlOnLoad;
         _eco.Event += EditorControlEvent;
 
@@ -37,9 +36,19 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         var env = CoreWebView2Environment.CreateAsync(userDataFolder: Settings.WebView2UserDataPath);
         _webView2Initialized = webView.EnsureCoreWebView2Async(env.Result); // calling Result might not be ideal I guess, but simpler here
         DataContext = this;
+
+        try
+        {
+            Index = Model.Index.OpenRead(indexFilePath);
+        }
+        catch (Exception ex)
+        {
+            EventProvider.Default.WriteMessage("Error searching index: " + ex.Message);
+            ErrorMessage = (ex.GetInterestingExceptionMessage() ?? ex.Message).Replace(Environment.NewLine, " ");
+        }
     }
 
-    public Model.Index Index { get; }
+    public Model.Index? Index { get; }
     public ObservableCollection<IndexSearchResultItem> Results { get; } = [];
     public string? ModelLanguageName
     {
@@ -242,9 +251,13 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
             if (!string.IsNullOrWhiteSpace(_query))
             {
+                var index = Index;
+                if (index == null)
+                    return;
+
                 try
                 {
-                    var result = Index.Search(_query, IndexSearchResultItem.CreateItem);
+                    var result = index.Search(_query, IndexSearchResultItem.CreateItem);
                     TotalHits = result.TotalHits;
                     var files = result.Items.OrderBy(i => i.RelativePath);
                     Results.AddRange(files);
@@ -264,9 +277,16 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
-        _stream?.Dispose();
-        webView?.Dispose();
-        Index?.Dispose();
+        try
+        {
+            _stream?.Dispose();
+            webView?.Dispose();
+            Index?.Dispose();
+        }
+        catch
+        {
+            // ignore
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -350,11 +370,12 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             await MoveEditorTo(1, 1);
             await SetLanguage(item);
 
-            if (Settings.Current.MonacoHighlightHits)
+            var index = Index;
+            if (index != null && Settings.Current.MonacoHighlightHits)
             {
                 // re-reading the whole for highlighting is (probably) faster than using the stream
                 var text = File.ReadAllText(item.Path, encoding);
-                var fragments = Index.GetFragmentsToHighlight(Query, text);
+                var fragments = index.GetFragmentsToHighlight(Query, text);
 
                 var ranges = new List<MonacoRange>();
                 foreach (var fragment in fragments)

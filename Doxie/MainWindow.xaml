@@ -167,6 +167,13 @@
                     Scan all directories
                 </Button>
 
+                <Button
+                    x:Name="removeLuceneDate"
+                    Margin="5"
+                    Click="RemoveLuceneData_Click">
+                    Remove all indexed data
+                </Button>
+
             </StackPanel>
             <GroupBox Grid.Row="2" Header="File inclusions or exclusions (extensions, regex, etc.)">
                 <Grid>

@@ -517,11 +517,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ScanAllDirs_Click(object sender, RoutedEventArgs e)
     {
-        if (Index == null || Index.Directories.Count == 0)
+        var index = Index;
+        if (index == null || index.Directories.Count == 0)
             return;
 
         var sw = Stopwatch.StartNew();
-        foreach (var dir in Index.Directories)
+        foreach (var dir in index.Directories.ToArray())
         {
             var indexingWindow = new IndexingWindow(dir, true)
             {
@@ -621,5 +622,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             OpenIndex(file);
         }
         e.Handled = true;
+    }
+
+    private void RemoveLuceneData_Click(object sender, RoutedEventArgs e)
+    {
+        var index = Index;
+        if (index == null)
+            return;
+
+        if (MessageBox.Show(this, $"Are you sure you want to remove all data from index? You will have to re-index it all.",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+
+        index.DeleteAllItems(true);
+        index.Vacuum();
+
+        MessageBox.Show(this, $"All data has been removed successfully",
+            AssemblyUtilities.GetProduct(),
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 }

@@ -150,18 +150,23 @@ public class Index : INotifyPropertyChanged, IDisposable
     public virtual IndexDirectory EnsureDirectory(string path) => Extensions.WrapDispatcher(() =>
     {
         ArgumentNullException.ThrowIfNull(path);
+        var dir = WithTransaction(() => EnsureDirectoryNoTransaction(path));
+        OnPropertyChanged(nameof(Directories));
+        return dir;
+    });
+
+    private IndexDirectory EnsureDirectoryNoTransaction(string path)
+    {
         var dir = Directories.FirstOrDefault(n => n.Path.EqualsIgnoreCase(path));
-        dir ??= WithTransaction(() =>
+        if (dir == null)
         {
             var max = _sqlDirectory.Database.ExecuteScalar($"SELECT MAX({nameof(Directory.Id)}) FROM {nameof(Directory)}", 0);
             dir = new IndexDirectory(this, max + 1, path);
             SaveDirectory(dir);
             Directories.Add(dir);
-            OnPropertyChanged(nameof(Directories));
-            return dir;
-        });
+        }
         return dir;
-    });
+    }
 
     public virtual bool RemoveDirectory(string path) => Extensions.WrapDispatcher(() =>
     {
@@ -264,15 +269,15 @@ public class Index : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
 
-        var dir = EnsureDirectory(request.InputDirectory.Path);
-        DeleteDocuments(dir);
-        var batch = new IndexDirectoryBatch(request.InputDirectory, Guid.NewGuid())
-        {
-            StartTimeUtc = DateTime.UtcNow
-        };
-
         WithTransaction(() =>
         {
+            var dir = EnsureDirectoryNoTransaction(request.InputDirectory.Path);
+            DeleteDocumentsNoTransaction(dir);
+            var batch = new IndexDirectoryBatch(request.InputDirectory, Guid.NewGuid())
+            {
+                StartTimeUtc = DateTime.UtcNow
+            };
+
             SaveDirectoryBatch(batch);
             UpdateDirectories();
 
@@ -421,9 +426,14 @@ public class Index : INotifyPropertyChanged, IDisposable
         if (directory.Path == null || directory.Id <= 0)
             throw new InvalidOperationException();
 
-        WithTransaction(() => DeleteDocuments(new Directory(_sqlDirectory.Database) { Path = directory.Path, Id = directory.Id, }));
-        Vacuum();
+        WithTransaction(() => DeleteDocumentsNoTransaction(directory));
         Extensions.WrapDispatcher(() => OnPropertyChanged(nameof(Directories)));
+    }
+
+    private void DeleteDocumentsNoTransaction(IndexDirectory directory)
+    {
+        DeleteDocuments(new Directory(_sqlDirectory.Database) { Path = directory.Path, Id = directory.Id, });
+        Vacuum();
     }
 
     private void DeleteDocuments(Directory directory)
@@ -431,7 +441,9 @@ public class Index : INotifyPropertyChanged, IDisposable
         var qry = NumericRangeQuery.NewInt32Range(FieldDirectoryId, directory.Id, directory.Id, true, true);
         var writer = GetWriter();
         writer.DeleteDocuments(qry);
-        writer.Commit();
+
+        // not sure why I need to remove this or there's an error after that
+        //writer.Commit();
     }
 
     public virtual bool DeleteDirectory(IndexDirectory dir)

@@ -86,7 +86,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
             throw new InvalidOperationException();
 
         file.Data.Save([]);
-        return new LuceneOutput(file);
+        return new LuceneOutput(this, file);
     }
 
     public override void DeleteFile(string name)
@@ -124,7 +124,11 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         return new LuceneInput(file);
     }
 
-    public override void Sync(ICollection<string> names) => ArgumentNullException.ThrowIfNull(names);// do nothing
+    public override void Sync(ICollection<string> names)
+    {
+        ArgumentNullException.ThrowIfNull(names);
+        Database.CacheFlush();
+    }
 
     protected override void Dispose(bool disposing) => Database.Dispose();
 
@@ -148,21 +152,19 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         }
     }
 
-    private sealed class LuceneOutput(LuceneFile file) : IndexOutput
+    private sealed class LuceneOutput(SqliteDirectory directory, LuceneFile file) : IndexOutput
     {
         // experience shows Lucene.Net does not support 64-bit checksum
         private readonly Crc32 _checksum = new();
         private readonly MemoryStream _memoryStream = new();
+        private bool _disposed;
 
         public LuceneFile File { get; } = file ?? throw new ArgumentNullException(nameof(file));
 
         public override long Position => _memoryStream.Position;
         public override long Checksum => _checksum.GetCurrentHashAsUInt32();
 
-        public override void Flush()
-        {
-            // do nothing
-        }
+        public override void Flush() => throw new NotSupportedException();
 
         [Obsolete]
         public override void Seek(long pos) => _memoryStream.Seek(pos, SeekOrigin.Begin);
@@ -182,10 +184,17 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
 
         protected override void Dispose(bool disposing)
         {
-            // do nothing
-            _memoryStream.Position = 0;
-            File.Data.Save(_memoryStream);
-            _memoryStream.Dispose();
+            if (disposing)
+            {
+                if (_disposed)
+                    return;
+
+                _memoryStream.Position = 0;
+                File.Data.Save(_memoryStream);
+                _memoryStream.Dispose();
+                directory.Database.CacheFlush();
+                _disposed = true;
+            }
         }
     }
 
@@ -219,7 +228,7 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         public override string ToString() => Name + ": " + Value;
     }
 
-    private sealed class LuceneFile : SQLiteBaseObject
+    private sealed class LuceneFile : SQLiteBaseObject, IDisposable
     {
         private readonly Lazy<MemoryStream> _stream;
 
@@ -249,15 +258,20 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         }
 
         public override string ToString() => Name ?? string.Empty;
+
+        public void Dispose()
+        {
+            if (_stream.IsValueCreated)
+            {
+                _stream.Value?.Dispose();
+            }
+        }
     }
 
     private sealed class LuceneLockFactory : LockFactory
     {
         public override Lucene.Net.Store.Lock MakeLock(string lockName) => new LuceneLock(lockName);
-        public override void ClearLock(string lockName)
-        {
-            // do nothing
-        }
+        public override void ClearLock(string lockName) { } // do nothing
     }
 
     private sealed class LuceneLock(string name) : Lucene.Net.Store.Lock
@@ -267,6 +281,6 @@ public class SqliteDirectory : Lucene.Net.Store.Directory
         public override string ToString() => Name;
         public override bool IsLocked() => false;
         public override bool Obtain() => true;
-        protected override void Dispose(bool disposing) { }             // do nothing
+        protected override void Dispose(bool disposing) { } // do nothing
     }
 }
