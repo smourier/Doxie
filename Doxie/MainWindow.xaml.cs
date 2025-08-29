@@ -172,7 +172,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Title = "Choose an index file path",
             Filter = $"Doxie Index Files (*{Model.Index.FileExtension})|*{Model.Index.FileExtension}",
             DefaultExt = Model.Index.FileExtension,
-            CheckFileExists = true,
+            CheckFileExists = false,
             CheckPathExists = true,
             RestoreDirectory = true,
         };
