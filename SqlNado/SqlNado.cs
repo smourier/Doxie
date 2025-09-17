@@ -11857,7 +11857,7 @@ namespace SqlNado.Utilities
             }
 
             if (length > int.MaxValue)
-                throw new ArgumentNullException(nameof(inputStream));
+                throw new SqlNadoException("0033: Input stream length is too large: " + length + ", maximum is: " + int.MaxValue + ".");
 
             var db = ((ISQLiteObject)Owner).Database;
             var table = db!.GetObjectTable(Owner.GetType());

@@ -427,13 +427,13 @@ public class Index : INotifyPropertyChanged, IDisposable
             throw new InvalidOperationException();
 
         WithTransaction(() => DeleteDocumentsNoTransaction(directory));
+        Vacuum();
         Extensions.WrapDispatcher(() => OnPropertyChanged(nameof(Directories)));
     }
 
     private void DeleteDocumentsNoTransaction(IndexDirectory directory)
     {
         DeleteDocuments(new Directory(_sqlDirectory.Database) { Path = directory.Path, Id = directory.Id, });
-        Vacuum();
     }
 
     private void DeleteDocuments(Directory directory)
