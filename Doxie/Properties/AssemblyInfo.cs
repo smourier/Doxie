@@ -6,7 +6,7 @@
 
 [assembly: AssemblyTitle("Doxie")]
 [assembly: AssemblyProduct("Doxie")]
-[assembly: AssemblyCopyright("Copyright (C) 2024-2025 Simon Mourier. All rights reserved.")]
+[assembly: AssemblyCopyright("Copyright (C) 2024-2026 Simon Mourier. All rights reserved.")]
 [assembly: AssemblyCulture("")]
 [assembly: AssemblyDescription("A local search engine focused on source code.")]
 [assembly: AssemblyCompany("Simon Mourier")]
