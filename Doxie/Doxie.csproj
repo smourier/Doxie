@@ -29,8 +29,8 @@
 	<ItemGroup>
 		<PackageReference Include="Lucene.Net.Memory" Version="4.8.0-beta00017" />
 		<PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
-		<PackageReference Include="System.IO.Hashing" Version="10.0.8" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
+		<PackageReference Include="System.IO.Hashing" Version="10.0.9" />
 	</ItemGroup>
 
 	<ItemGroup>
