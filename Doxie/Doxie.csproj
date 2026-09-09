@@ -27,10 +27,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Lucene.Net.Memory" Version="4.8.0-beta00017" />
-		<PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
-		<PackageReference Include="System.IO.Hashing" Version="10.0.11" />
+		<PackageReference Include="Lucene.Net.Memory" Version="4.8.0-beta00018" />
+		<PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00018" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+		<PackageReference Include="System.IO.Hashing" Version="10.0.12" />
 	</ItemGroup>
 
 	<ItemGroup>
