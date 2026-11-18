@@ -1,0 +1,3 @@
+# every text file is stored with LF and written out with CRLF, whatever core.autocrlf says on the machine,
+# git detects binary files on its own.
+* text=auto eol=crlf
