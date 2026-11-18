@@ -1,7 +1,7 @@
 ﻿namespace Doxie.Monaco;
 
 // https://microsoft.github.io/monaco-editor/docs.html#interfaces/languages.ILanguageExtensionPoint.html
-public class MonacoLanguageExtensionPoint
+public class LanguageExtensionPoint
 {
     public const string DefaultLanguageId = "plaintext";
     public const string DefaultLanguageName = "Plain Text";

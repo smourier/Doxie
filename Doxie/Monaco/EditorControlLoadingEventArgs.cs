@@ -1,6 +1,6 @@
 ﻿namespace Doxie.Monaco;
 
-public class MonacoLoadEventArgs() : MonacoEventArgs(MonacoEventType.Load)
+public class EditorControlLoadingEventArgs() : EditorControlEventArgs(EditorControlEventType.Load)
 {
     public string? DocumentText { get; set; }
 }

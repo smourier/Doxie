@@ -1,6 +1,6 @@
 ﻿namespace Doxie.Monaco;
 
-public class MonacoKeyEventArgs(MonacoEventType type, string? json) : MonacoEventArgs(type, json)
+public class EditorControlKeyEventArgs(EditorControlEventType type, string? json) : EditorControlEventArgs(type, json)
 {
     public int KeyCode => RootElement.GetValue("keyCode", 0);
     public string? Code => RootElement.GetNullifiedValue("code");

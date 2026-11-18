@@ -10,6 +10,7 @@ public static class MonacoResources
     [MaybeNull]
     public static string IndexFilePath { get; set; }
 
+    private const string _cobolLanguageName = @"Languages\cobol.js";
     private static Task? _ensureMonacoFilesTask;
     private static readonly Lock _ensureMonacoFilesLock = new();
 
@@ -36,14 +37,11 @@ public static class MonacoResources
 
         const string indexName = "index.html";
         IndexFilePath = Path.Combine(MonacoFilesDirectoryPath, indexName);
-        using var indexStream = asm.GetManifestResourceStream(typeof(MonacoResources).Namespace + "." + indexName) ?? throw new InvalidOperationException();
-
-        IOUtilities.FileEnsureDirectory(IndexFilePath);
-        using var index = new FileStream(IndexFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
-        indexStream.CopyTo(index);
+        WritePageFile(asm, indexName);
+        WritePageFile(asm, _cobolLanguageName);
 
         // we check the last known file is there
-        var someFile = Path.Combine(MonacoFilesDirectoryPath, @"vs\language\typescript\tsWorker.js");
+        var someFile = Path.Combine(MonacoFilesDirectoryPath, @"vs\language\typescript\monaco.contribution.js");
         var fi = new FileInfo(someFile);
         if (fi.Exists && fi.Length > 0)
         {
@@ -51,9 +49,41 @@ public static class MonacoResources
             return;
         }
 
+        DeleteOtherVersions();
         using var stream = asm.GetManifestResourceStream(zip) ?? throw new InvalidOperationException();
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
         archive.ExtractToDirectory(MonacoFilesDirectoryPath, true);
         _ensureMonacoFilesTask = null;
+    }
+
+    // a page file is embedded under its path with dots for separators, Languages\cobol.js as Languages.cobol.js.
+    private static void WritePageFile(Assembly asm, string relativePath)
+    {
+        var resourceName = typeof(MonacoResources).Namespace + "." + relativePath.Replace(Path.DirectorySeparatorChar, '.');
+        using var resourceStream = asm.GetManifestResourceStream(resourceName) ?? throw new InvalidOperationException();
+
+        var filePath = Path.Combine(MonacoFilesDirectoryPath, relativePath);
+        IOUtilities.FileEnsureDirectory(filePath);
+        using var file = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+        resourceStream.CopyTo(file);
+    }
+
+    private static void DeleteOtherVersions()
+    {
+        var root = Path.GetDirectoryName(MonacoFilesDirectoryPath)!;
+        foreach (var folder in Directory.EnumerateDirectories(root))
+        {
+            if (folder.EqualsIgnoreCase(MonacoFilesDirectoryPath))
+                continue;
+
+            try
+            {
+                Directory.Delete(folder, true);
+            }
+            catch (Exception ex)
+            {
+                EventProvider.Default.WriteMessage("Error deleting '" + folder + "': " + ex.Message);
+            }
+        }
     }
 }

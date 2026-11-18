@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -10,27 +10,33 @@
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<StartupObject>Doxie.Program</StartupObject>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<!-- a single file publish extracts everything on first run, since WPF's C++/CLI assemblies only load from disk, next to their native dependencies.
+		NETSDK1244 asks to remove it, which brings the startup crash back, see https://github.com/dotnet/wpf/issues/11842. -->
+		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		<NoWarn>$(NoWarn);NETSDK1244</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
 	  <None Remove="Resources\Doxie.png" />
 	  <None Remove="Resources\index.html" />
-	  <None Remove="Resources\vs.0.52.2.zip" />
+	  <None Remove="Resources\vs.0.55.1.zip" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <EmbeddedResource Include="Resources\index.html" />
+	  <EmbeddedResource Include="Resources\Languages\cobol.js" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <EmbeddedResource Include="Resources\vs.0.52.2.zip" />
+	  <EmbeddedResource Include="Resources\vs.0.55.1.zip" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Lucene.Net.Memory" Version="4.8.0-beta00018" />
 		<PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00018" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
-		<PackageReference Include="System.IO.Hashing" Version="10.0.12" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+		<PackageReference Include="System.IO.Hashing" Version="11.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

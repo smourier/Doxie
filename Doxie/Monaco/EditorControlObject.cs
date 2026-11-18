@@ -1,30 +1,29 @@
 ﻿namespace Doxie.Monaco;
 
-#pragma warning disable IDE1006 // Naming Styles
+#pragma warning disable CA1822 // Mark members as static
 
 [ComVisible(true)]
-public partial class MonacoObject
+public partial class EditorControlObject
 {
-    public event EventHandler<MonacoLoadEventArgs>? Load;
-    public event EventHandler<MonacoEventArgs>? Event;
+    public event EventHandler<EditorControlLoadingEventArgs>? Loading;
+    public event EventHandler<EditorControlEventArgs>? Event;
 
-    public object getOptions() => JsonSerializer.Serialize(new
+    public string GetOptions()
     {
-        automaticLayout = true,
-        //language = "plaintext",
-        fontSize = Settings.Current.MonacoFontSize.ToString(CultureInfo.InvariantCulture) + "px",
-        dragAndDrop = false,
-        mouseWheelZoom = true,
-        contextmenu = false,
-        theme = Settings.Current.MonacoTheme,
-    });
+        var options = new EditorControlObjectOptions
+        {
+            FontSize = Settings.Current.MonacoFontSize.ToString(CultureInfo.InvariantCulture) + "px",
+            Theme = Settings.Current.MonacoTheme,
+        };
+        return JsonSerializer.Serialize(options, MonacoExtensions.SerializerOptions);
+    }
 
-    public string? load()
+    public string? Load()
     {
         try
         {
-            var e = new MonacoLoadEventArgs();
-            Load?.Invoke(this, e);
+            var e = new EditorControlLoadingEventArgs();
+            Loading?.Invoke(this, e);
             return e.DocumentText;
         }
         catch (Exception ex)
@@ -34,7 +33,7 @@ public partial class MonacoObject
         }
     }
 
-    public void onEvent(MonacoEventType type, string? json = null)
+    public void OnEvent(EditorControlEventType type, string? json = null)
     {
         var handler = Event;
         if (handler == null)
@@ -42,13 +41,13 @@ public partial class MonacoObject
 
         try
         {
-            var e = type switch
+            EditorControlEventArgs e = type switch
             {
-                MonacoEventType.KeyDown or MonacoEventType.KeyUp => new MonacoKeyEventArgs(type, json),
-                MonacoEventType.ConfigurationChanged => new MonacoConfigurationChangedEventArgs(json),
-                _ => new MonacoEventArgs(type, json),
+                EditorControlEventType.KeyDown or EditorControlEventType.KeyUp => new EditorControlKeyEventArgs(type, json),
+                EditorControlEventType.ConfigurationChanged => new EditorControlConfigurationChangedEventArgs(json),
+                _ => new EditorControlEventArgs(type, json),
             };
-            handler?.Invoke(this, e);
+            handler.Invoke(this, e);
         }
         catch (Exception ex)
         {
@@ -57,4 +56,3 @@ public partial class MonacoObject
         }
     }
 }
-#pragma warning restore IDE1006 // Naming Styles

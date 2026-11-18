@@ -1,14 +1,13 @@
 ﻿namespace Doxie.Monaco;
 
-#pragma warning disable IDE1006 // Naming Styles
-public class MonacoObjectOptions
+public class EditorControlObjectOptions
 {
-    public bool automaticLayout { get; set; } = true;
-    public string? language { get; set; } // = "plaintext";
-    public string? fontSize { get; set; } = "13px";
-    public bool dragAndDrop { get; set; } = false;
-    public bool mouseWheelZoom { get; set; } = true;
-    public bool contextmenu { get; set; } = false;
-    public string? theme { get; set; } = "vs";
+    // Monaco's own ResizeObserver loops on resize, the window lays the editor out itself instead.
+    public bool AutomaticLayout { get; set; }
+    public string? Language { get; set; }
+    public string? FontSize { get; set; } = "13px";
+    public bool DragAndDrop { get; set; }
+    public bool MouseWheelZoom { get; set; } = true;
+    public bool Contextmenu { get; set; }
+    public string? Theme { get; set; } = "vs";
 }
-#pragma warning restore IDE1006 // Naming Styles

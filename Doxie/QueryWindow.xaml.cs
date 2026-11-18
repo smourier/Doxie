@@ -8,7 +8,10 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private IndexSearchResultItem? _item;
     private int _totalHits;
     private readonly Task _webView2Initialized;
-    private readonly MonacoObject _eco = new();
+    private const string _hostObjectName = "dotnet";
+    private readonly EditorControlObject _dotnet = new();
+    private bool _isEditorCreated;
+    private TaskCompletionSource<bool>? _documentLoaded;
     private List<MonacoRange>? _highlightedRanges;
     private int _highlightedRangesIndex = -1;
     private LinesStream? _stream;
@@ -28,11 +31,12 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     public QueryWindow(string indexFilePath)
     {
         ArgumentNullException.ThrowIfNull(indexFilePath);
-        _eco.Load += EditorControlOnLoad;
-        _eco.Event += EditorControlEvent;
+        _dotnet.Loading += EditorControlOnLoading;
+        _dotnet.Event += EditorControlEvent;
 
         InitializeComponent();
         webView.CoreWebView2InitializationCompleted += CoreWebView2InitializationCompleted;
+        webView.SizeChanged += OnWebViewSizeChanged;
         var env = CoreWebView2Environment.CreateAsync(userDataFolder: Settings.WebView2UserDataPath);
         _webView2Initialized = webView.EnsureCoreWebView2Async(env.Result); // calling Result might not be ideal I guess, but simpler here
         DataContext = this;
@@ -337,15 +341,33 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     {
         await Program._monacoInstalledTask;
         webView.CoreWebView2.ContextMenuRequested += (s, args) => args.Handled = true;
-        webView.CoreWebView2.AddHostObjectToScript("doxie", _eco);
+        webView.CoreWebView2.AddHostObjectToScript(_hostObjectName, _dotnet);
+        webView.CoreWebView2.NavigationCompleted += async (s, args) =>
+        {
+            if (args.IsSuccess)
+            {
+                await webView.ExecuteScriptAsync("initializeMonaco()");
+            }
+        };
         webView.Source = new Uri(MonacoResources.IndexFilePath);
+    }
+
+    private void OnWebViewSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (!_isEditorCreated || e.NewSize.Width <= 0 || e.NewSize.Height <= 0)
+            return;
+
+        _ = LayoutEditor(e.NewSize.Width, e.NewSize.Height);
     }
 
     private async Task<bool> LoadFile(IndexSearchResultItem item)
     {
-        if (item.Path == null || !IOUtilities.PathIsFile(item.Path))
+        if (!_isEditorCreated || item.Path == null || !IOUtilities.PathIsFile(item.Path))
             return false;
 
+        var documentLoaded = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _documentLoaded?.TrySetResult(false);
+        _documentLoaded = documentLoaded;
         try
         {
             var encoding = EncodingDetector.DetectEncoding(item.Path, Settings.Current.EncodingDetectorMode);
@@ -365,6 +387,10 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
             };
             _stream.Load();
             await webView.ExecuteScriptAsync($"loadFromHost()");
+
+            // the page pulls the chunks asynchronously, the hits can only be decorated once they all are in.
+            if (!await documentLoaded.Task)
+                return false;
 
             await SetEditorPosition();
             await MoveEditorTo(1, 1);
@@ -415,11 +441,12 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void EditorControlOnLoad(object? sender, MonacoLoadEventArgs e)
+    private void EditorControlOnLoading(object? sender, EditorControlLoadingEventArgs e)
     {
         if (_stream == null || _stream.Lines.Count == 0)
         {
             e.DocumentText = null;
+            _documentLoaded?.TrySetResult(true);
             return;
         }
 
@@ -430,6 +457,7 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         if (linesCount <= 0)
         {
             e.DocumentText = null;
+            _documentLoaded?.TrySetResult(true);
             return;
         }
 
@@ -441,8 +469,9 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
     private Task<string> EnableMinimap(bool enabled) => webView.ExecuteScriptAsync("editor.updateOptions({minimap:{enabled:" + enabled.ToString().ToLowerInvariant() + "}})");
     private Task<string> SetEditorTheme(string? theme = null) { theme = theme.Nullify() ?? "vs-dark"; return webView.ExecuteScriptAsync($"monaco.editor.setTheme('{theme}')"); }
     private async Task<string> FocusEditor() { var result = await webView.ExecuteScriptAsync("editor.focus()"); webView.Focus(); return result; }
-    private Task<string> SetEditorLanguage(string? lang) => webView.ExecuteScriptAsync($"monaco.editor.setModelLanguage(editor.getModel(), '{lang.Nullify() ?? MonacoLanguageExtensionPoint.DefaultLanguageId}');");
+    private Task<string> SetEditorLanguage(string? lang) => webView.ExecuteScriptAsync($"monaco.editor.setModelLanguage(editor.getModel(), '{lang.Nullify() ?? LanguageExtensionPoint.DefaultLanguageId}');");
     private Task<string> SetEditorPosition(int lineNumber = 0, int column = 0) => webView.ExecuteScriptAsync("editor.setPosition({lineNumber:" + lineNumber + ",column:" + column + "})");
+    private Task<string> LayoutEditor(double width, double height) => webView.ExecuteScriptAsync($"editor.layout({{width:{(int)Math.Round(width)},height:{(int)Math.Round(height)}}})");
     private Task<string> RevealLineInCenter(int lineNumber = 0) => webView.ExecuteScriptAsync($"editor.revealLineInCenter({lineNumber})");
     private Task<string> MoveEditorTo(int? line = null, int? column = null) => webView.ExecuteScriptAsync($"moveEditorTo({column}, {line})");
     private Task<string> HighlightRanges(IEnumerable<MonacoRange> ranges)
@@ -482,11 +511,11 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private async void EditorControlEvent(object? sender, MonacoEventArgs e)
+    private async void EditorControlEvent(object? sender, EditorControlEventArgs e)
     {
         switch (e.EventType)
         {
-            case MonacoEventType.EditorCreated:
+            case EditorControlEventType.EditorCreated:
                 if (!MonacoExtensions.LanguagesLoaded)
                 {
                     await MonacoExtensions.LoadLanguages(webView);
@@ -494,7 +523,9 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
 
                 await EnableMinimap(Settings.Current.MonacoShowMinimap);
                 await SetEditorTheme(Settings.Current.MonacoTheme);
+                await LayoutEditor(webView.ActualWidth, webView.ActualHeight);
                 await FocusEditor();
+                _isEditorCreated = true;
 
                 var item = Item;
                 if (item != null)
@@ -502,6 +533,11 @@ public partial class QueryWindow : Window, INotifyPropertyChanged
                     if (!await LoadFile(item))
                         return;
                 }
+                break;
+
+            case EditorControlEventType.Log:
+            case EditorControlEventType.Error:
+                EventProvider.Default.WriteMessage(e.ToString());
                 break;
         }
     }
